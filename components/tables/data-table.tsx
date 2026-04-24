@@ -75,6 +75,7 @@ export function DataTable<TData, TValue>({
   const [columnFilters, setColumnFilters] = useState<ColumnFiltersState>([]);
   const [columnVisibility, setColumnVisibility] = useState<VisibilityState>({});
   const [globalFilter, setGlobalFilter] = useState("");
+  const [navigatingHref, setNavigatingHref] = useState<string | null>(null);
   const skeletonColumnCount = Math.max(columns.length, 4);
   // eslint-disable-next-line react-hooks/incompatible-library
   const table = useReactTable({
@@ -118,6 +119,13 @@ export function DataTable<TData, TValue>({
     return target instanceof HTMLElement && Boolean(
       target.closest("a,button,input,select,textarea,[role='button'],[data-no-row-click]"),
     );
+  }
+
+  function openHref(href: string, target: EventTarget | null) {
+    if (!isInteractiveTarget(target) && navigatingHref !== href) {
+      setNavigatingHref(href);
+      router.push(href);
+    }
   }
 
   return (
@@ -188,10 +196,19 @@ export function DataTable<TData, TValue>({
             mobileRows.map((row) => (
               <div
                 key={row.id}
-                className={row.href ? "cursor-pointer" : undefined}
+                aria-busy={row.href === navigatingHref}
+                className={cn(
+                  row.href && "cursor-pointer rounded-lg transition-colors",
+                  row.href === navigatingHref && "bg-primary/10 shadow-[inset_3px_0_0_var(--primary)] animate-pulse pointer-events-none",
+                )}
                 onClick={(event) => {
-                  if (row.href && !isInteractiveTarget(event.target)) {
-                    router.push(row.href);
+                  if (row.href) {
+                    openHref(row.href, event.target);
+                  }
+                }}
+                onMouseEnter={() => {
+                  if (row.href) {
+                    router.prefetch(row.href);
                   }
                 }}
               >
@@ -252,20 +269,38 @@ export function DataTable<TData, TValue>({
             ) : rows.length ? (
               rows.map((row) => {
                 const href = getRowHref?.(row.original);
+                const isNavigating = Boolean(href && href === navigatingHref);
                 return (
                 <TableRow
                   key={row.id}
-                  className={href ? "cursor-pointer" : undefined}
+                  aria-busy={isNavigating}
+                  data-navigating={isNavigating ? "true" : undefined}
+                  role={href ? "link" : undefined}
+                  className={cn(
+                    href && "cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring/50",
+                    "data-[navigating=true]:bg-primary/10 data-[navigating=true]:shadow-[inset_3px_0_0_var(--primary)] data-[navigating=true]:animate-pulse",
+                    isNavigating && "pointer-events-none",
+                  )}
                   tabIndex={href ? 0 : undefined}
                   onClick={(event) => {
-                    if (href && !isInteractiveTarget(event.target)) {
-                      router.push(href);
+                    if (href) {
+                      openHref(href, event.target);
+                    }
+                  }}
+                  onMouseEnter={() => {
+                    if (href) {
+                      router.prefetch(href);
+                    }
+                  }}
+                  onFocus={() => {
+                    if (href) {
+                      router.prefetch(href);
                     }
                   }}
                   onKeyDown={(event) => {
-                    if (href && (event.key === "Enter" || event.key === " ") && !isInteractiveTarget(event.target)) {
+                    if (href && (event.key === "Enter" || event.key === " ")) {
                       event.preventDefault();
-                      router.push(href);
+                      openHref(href, event.target);
                     }
                   }}
                 >
