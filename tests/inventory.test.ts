@@ -7,11 +7,16 @@ import {
   calculatePearlEstimate,
   calculateProductManufacturingCost,
   canProduce,
+  completeProductionBatch,
+  createPlannedProductionFromOrder,
   createProductionBatch,
+  createPurchaseListFromBatch,
   fulfillOrder,
   getDashboardMetrics,
   getLowStockMaterials,
   getRecommendedPrice,
+  planProductionFromOrder,
+  planPurchaseListFromBatch,
   recordPurchase,
 } from "@/lib/services/inventory";
 import { pearlCalculatorSchema, settingsSchema } from "@/lib/validations";
@@ -164,6 +169,80 @@ describe("inventory operations", () => {
     expect(productAfter.currentStock).toBe(productBefore.currentStock - 3);
     expect(productAfter.reservedStock).toBe(0);
     expect(result.movements).toHaveLength(2);
+  });
+
+  it("plans order production by shortage, full quantity, and open linked batches", () => {
+    const state = getDemoInventoryState();
+    const shortage = planProductionFromOrder(state, "order-demo-001", "shortage");
+    const full = planProductionFromOrder(state, "order-demo-001", "full");
+
+    expect(shortage.lines[0].quantityToProduce).toBe(0);
+    expect(full.lines[0].quantityToProduce).toBe(2);
+
+    const planned = createPlannedProductionFromOrder(state, {
+      ownerId: state.settings.ownerId,
+      orderId: "order-demo-001",
+      mode: "full",
+      date: "2026-04-24",
+    });
+    const replanned = planProductionFromOrder(planned.state, "order-demo-001", "full");
+
+    expect(planned.batches).toHaveLength(1);
+    expect(replanned.lines[0].quantityToProduce).toBe(0);
+  });
+
+  it("creates planned production without changing stock", () => {
+    const state = getDemoInventoryState();
+    const beforeProduct = state.products.find((product) => product.id === "prod-cherry-blossoms")!;
+    const beforePearl = state.materialVariants.find((variant) => variant.id === "var-pearl-12mm")!;
+    const result = createPlannedProductionFromOrder(state, {
+      ownerId: state.settings.ownerId,
+      orderId: "order-demo-001",
+      mode: "full",
+      date: "2026-04-24",
+    });
+    const afterProduct = result.state.products.find((product) => product.id === "prod-cherry-blossoms")!;
+    const afterPearl = result.state.materialVariants.find((variant) => variant.id === "var-pearl-12mm")!;
+
+    expect(result.batches[0].status).toBe("planned");
+    expect(afterProduct.currentStock).toBe(beforeProduct.currentStock);
+    expect(afterPearl.stockQuantity).toBe(beforePearl.stockQuantity);
+    expect(result.state.inventoryMovements).toHaveLength(state.inventoryMovements.length);
+  });
+
+  it("completes a planned batch with material and finished-good movements", () => {
+    const state = getDemoInventoryState();
+    const planned = createPlannedProductionFromOrder(state, {
+      ownerId: state.settings.ownerId,
+      orderId: "order-demo-001",
+      mode: "full",
+      date: "2026-04-24",
+    });
+    const completed = completeProductionBatch(planned.state, {
+      productionBatchId: planned.batches[0].id,
+      date: "2026-04-24",
+    });
+
+    expect(completed.batch.status).toBe("completed");
+    expect(completed.batch.id).toBe(planned.batches[0].id);
+    expect(completed.movements.some((move) => move.movementType === "production_output")).toBe(true);
+    expect(completed.movements.some((move) => move.movementType === "production_consumption")).toBe(true);
+  });
+
+  it("plans purchase lists from batch shortages without changing stock", () => {
+    const state = getDemoInventoryState();
+    const plan = planPurchaseListFromBatch(state, "batch-demo-001");
+    const beforePearl = state.materialVariants.find((variant) => variant.id === "var-pearl-12mm")!;
+    const result = createPurchaseListFromBatch(state, {
+      ownerId: state.settings.ownerId,
+      productionBatchId: "batch-demo-001",
+    });
+    const afterPearl = result.state.materialVariants.find((variant) => variant.id === "var-pearl-12mm")!;
+
+    expect(plan.lines.some((line) => line.materialVariantId === "var-pearl-12mm")).toBe(true);
+    expect(result.purchaseListLines.length).toBeGreaterThan(0);
+    expect(afterPearl.stockQuantity).toBe(beforePearl.stockQuantity);
+    expect(result.state.purchases).toHaveLength(state.purchases.length);
   });
 });
 

@@ -1,10 +1,12 @@
 import { notFound } from "next/navigation";
 import { BadgePercent, CircleDollarSign, PackageCheck, Wallet } from "lucide-react";
 
+import { OrderProductionPlanButton } from "@/components/forms/mto-shortcuts";
 import { OrderFulfillmentButton } from "@/components/forms/order-fulfillment-button";
 import { KpiCard, PageHeader } from "@/components/layout/page-helpers";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { ProductImage } from "@/components/ui/product-image";
 import {
   Table,
   TableBody,
@@ -32,6 +34,14 @@ export default async function OrderDetailPage({
 
   const items = state.orderItems.filter((item) => item.orderId === order.id);
   const profit = calculateOrderProfit(state, order.id);
+  const linkedBatches = state.productionBatches.filter((batch) =>
+    state.productionBatchOrderLinks.some(
+      (link) => link.orderId === order.id && link.productionBatchId === batch.id,
+    ),
+  );
+  const orderMovements = state.inventoryMovements.filter(
+    (movement) => movement.referenceType === "order" && movement.referenceId === order.id,
+  );
 
   return (
     <>
@@ -40,7 +50,14 @@ export default async function OrderDetailPage({
         description={`${order.customerName} · ${order.platform} · ${order.status.replaceAll("_", " ")}`}
         eyebrow="Order detail"
         action={
-          <OrderFulfillmentButton orderId={order.id} disabled={order.stockDeducted} />
+          <>
+            <OrderProductionPlanButton
+              state={state}
+              orderId={order.id}
+              disabled={order.stockDeducted}
+            />
+            <OrderFulfillmentButton orderId={order.id} disabled={order.stockDeducted} />
+          </>
         }
       />
 
@@ -74,7 +91,16 @@ export default async function OrderDetailPage({
                 const product = state.products.find((entry) => entry.id === item.productId);
                 return (
                   <TableRow key={item.id}>
-                    <TableCell className="font-medium">{product?.name}</TableCell>
+                    <TableCell className="font-medium">
+                      {product ? (
+                        <div className="flex items-center gap-3">
+                          <ProductImage product={product} size={40} />
+                          <span>{product.name}</span>
+                        </div>
+                      ) : (
+                        "Unknown product"
+                      )}
+                    </TableCell>
                     <TableCell>{formatQuantity(item.quantity, "pcs")}</TableCell>
                     <TableCell>{formatRupiah(item.unitSellingPrice)}</TableCell>
                     <TableCell>{formatRupiah(item.unitCost)}</TableCell>
@@ -92,6 +118,72 @@ export default async function OrderDetailPage({
             </Badge>
             <Badge variant="outline">Payment: {order.paymentStatus}</Badge>
             <Badge variant="outline">Fulfillment: {order.fulfillmentStatus}</Badge>
+          </div>
+        </CardContent>
+      </Card>
+
+      <Card>
+        <CardHeader>
+          <CardTitle>Traceability</CardTitle>
+          <CardDescription>Source order, planned production, completed batches, and posted movements.</CardDescription>
+        </CardHeader>
+        <CardContent className="grid gap-6 lg:grid-cols-2">
+          <div>
+            <h3 className="mb-3 text-sm font-medium">Linked Production Batches</h3>
+            <Table>
+              <TableHeader>
+                <TableRow>
+                  <TableHead>Product</TableHead>
+                  <TableHead>Status</TableHead>
+                  <TableHead>Qty</TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {linkedBatches.length ? linkedBatches.map((batch) => {
+                  const product = state.products.find((entry) => entry.id === batch.productId);
+                  return (
+                    <TableRow key={batch.id}>
+                      <TableCell>{product?.name ?? "Unknown product"}</TableCell>
+                      <TableCell>
+                        <Badge variant={batch.status === "completed" ? "secondary" : "outline"}>
+                          {batch.status.replaceAll("_", " ")}
+                        </Badge>
+                      </TableCell>
+                      <TableCell>{formatQuantity(batch.quantityMade, "pcs")}</TableCell>
+                    </TableRow>
+                  );
+                }) : (
+                  <TableRow>
+                    <TableCell colSpan={3}>No production batches are linked yet.</TableCell>
+                  </TableRow>
+                )}
+              </TableBody>
+            </Table>
+          </div>
+          <div>
+            <h3 className="mb-3 text-sm font-medium">Inventory Movements</h3>
+            <Table>
+              <TableHeader>
+                <TableRow>
+                  <TableHead>Type</TableHead>
+                  <TableHead>Qty Out</TableHead>
+                  <TableHead>Value</TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {orderMovements.length ? orderMovements.map((movement) => (
+                  <TableRow key={movement.id}>
+                    <TableCell>{movement.movementType.replaceAll("_", " ")}</TableCell>
+                    <TableCell>{formatQuantity(movement.quantityOut, movement.unit)}</TableCell>
+                    <TableCell>{formatRupiah(movement.totalValue)}</TableCell>
+                  </TableRow>
+                )) : (
+                  <TableRow>
+                    <TableCell colSpan={3}>No fulfillment movements have posted yet.</TableCell>
+                  </TableRow>
+                )}
+              </TableBody>
+            </Table>
           </div>
         </CardContent>
       </Card>

@@ -8,6 +8,7 @@ import { useMemo } from "react";
 import { ProductEditForm } from "@/components/forms/master-data-forms";
 import { DataTable } from "@/components/tables/data-table";
 import { MoneyCell, QuantityCell, StatusBadge } from "@/components/ui/data-display";
+import { ProductImage } from "@/components/ui/product-image";
 import { formatPercent, formatQuantity, formatRupiah } from "@/lib/formatters";
 import type { InventoryState } from "@/lib/types";
 
@@ -15,6 +16,7 @@ export interface ProductRow {
   id: string;
   name: string;
   sku: string;
+  photoUrl?: string;
   sellingPrice: number;
   manufacturingCost: number;
   grossMargin: number;
@@ -34,11 +36,14 @@ function createColumns(state: InventoryState): ColumnDef<ProductRow>[] {
     accessorKey: "name",
     header: () => <div className="text-center">Product</div>,
     cell: ({ row }) => (
-      <div className="flex flex-col items-center text-center">
-        <Link href={`/products/${row.original.id}`} className="font-medium hover:underline">
-          {row.original.name}
-        </Link>
-        <span className="text-xs text-muted-foreground">{row.original.sku}</span>
+      <div className="flex items-center justify-center gap-3 text-left">
+        <ProductImage product={row.original} size={44} />
+        <div className="flex min-w-0 flex-col">
+          <Link href={`/products/${row.original.id}`} className="font-medium hover:underline">
+            {row.original.name}
+          </Link>
+          <span className="text-xs text-muted-foreground">{row.original.sku}</span>
+        </div>
       </div>
     ),
   },
@@ -108,11 +113,14 @@ export function ProductsTable({ data, state }: { data: ProductRow[]; state: Inve
       mobileCard={(row) => (
         <div className="rounded-lg border bg-card p-3">
           <div className="flex items-start justify-between gap-3">
-            <div>
-              <Link href={`/products/${row.id}`} className="font-medium hover:underline">
-                {row.name}
-              </Link>
-              <div className="text-xs text-muted-foreground">{row.sku}</div>
+            <div className="flex min-w-0 items-center gap-3">
+              <ProductImage product={row} size={44} />
+              <div className="min-w-0">
+                <Link href={`/products/${row.id}`} className="font-medium hover:underline">
+                  {row.name}
+                </Link>
+                <div className="text-xs text-muted-foreground">{row.sku}</div>
+              </div>
             </div>
             <StatusBadge tone={row.grossMargin < row.targetMargin ? "danger" : "success"}>
               {formatPercent(row.grossMargin)}

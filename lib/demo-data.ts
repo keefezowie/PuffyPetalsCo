@@ -242,6 +242,7 @@ export function getDemoInventoryState(): InventoryState {
       averageUnitManufacturingCost: 0,
       lastProductionCost: 0,
       active: true,
+      photoUrl: "/flowers/cherry-blossoms.svg",
     },
     {
       id: "prod-orchid",
@@ -260,6 +261,7 @@ export function getDemoInventoryState(): InventoryState {
       averageUnitManufacturingCost: 0,
       lastProductionCost: 0,
       active: true,
+      photoUrl: "/flowers/orchid.svg",
     },
     {
       id: "prod-hydrangea",
@@ -278,6 +280,7 @@ export function getDemoInventoryState(): InventoryState {
       averageUnitManufacturingCost: 0,
       lastProductionCost: 0,
       active: true,
+      photoUrl: "/flowers/hydrangea.svg",
     },
     {
       id: "prod-puffy-blush",
@@ -296,6 +299,7 @@ export function getDemoInventoryState(): InventoryState {
       averageUnitManufacturingCost: 0,
       lastProductionCost: 0,
       active: true,
+      photoUrl: "/flowers/puffy-blush.svg",
     },
   ];
 
@@ -353,12 +357,17 @@ export function getDemoInventoryState(): InventoryState {
         productId: "prod-cherry-blossoms",
         quantityMade: 6,
         date: demoDate,
+        status: "completed",
         unitManufacturingCost: 0,
         totalManufacturingCost: 0,
         notes: "Sample batch.",
+        completedAt: demoDate,
       },
     ],
     productionBatchLines: [],
+    productionBatchOrderLinks: [],
+    purchaseLists: [],
+    purchaseListLines: [],
     inventoryMovements: [],
     orders: [
       {

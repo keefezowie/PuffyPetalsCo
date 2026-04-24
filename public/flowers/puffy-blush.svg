@@ -1,0 +1,18 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 256 256" role="img" aria-label="Puffy Blush Bloom">
+  <rect width="256" height="256" fill="#fbf0ed"/>
+  <path d="M128 215c1-49-3-82-12-112" fill="none" stroke="#7a816c" stroke-width="11" stroke-linecap="round"/>
+  <g fill="#d1a9a5">
+    <circle cx="128" cy="72" r="36"/>
+    <circle cx="170" cy="99" r="38"/>
+    <circle cx="160" cy="150" r="40"/>
+    <circle cx="103" cy="152" r="40"/>
+    <circle cx="83" cy="101" r="38"/>
+  </g>
+  <g fill="#f3c6c1" opacity=".9">
+    <circle cx="113" cy="94" r="23"/>
+    <circle cx="143" cy="98" r="23"/>
+    <circle cx="129" cy="129" r="26"/>
+  </g>
+  <circle cx="128" cy="124" r="22" fill="#a58b71"/>
+  <circle cx="128" cy="124" r="9" fill="#fffaf4"/>
+</svg>

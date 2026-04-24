@@ -1,0 +1,19 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 256 256" role="img" aria-label="Cherry Blossoms">
+  <rect width="256" height="256" fill="#fff4f1"/>
+  <path d="M70 186c40-36 81-69 119-112" fill="none" stroke="#7a816c" stroke-width="10" stroke-linecap="round"/>
+  <g fill="#d98d9a">
+    <circle cx="86" cy="94" r="26"/>
+    <circle cx="118" cy="72" r="26"/>
+    <circle cx="151" cy="93" r="26"/>
+    <circle cx="139" cy="132" r="26"/>
+    <circle cx="98" cy="132" r="26"/>
+  </g>
+  <g fill="#f7c3ca">
+    <circle cx="159" cy="62" r="18"/>
+    <circle cx="187" cy="80" r="18"/>
+    <circle cx="178" cy="113" r="18"/>
+    <circle cx="144" cy="111" r="18"/>
+  </g>
+  <circle cx="118" cy="105" r="17" fill="#fff7e8"/>
+  <circle cx="166" cy="91" r="10" fill="#fff7e8"/>
+</svg>

@@ -1,6 +1,7 @@
 import { PageHeader } from "@/components/layout/page-helpers";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { MoneyCell, QuantityCell, StatusBadge } from "@/components/ui/data-display";
+import { ProductImage } from "@/components/ui/product-image";
 import { EmptyState } from "@/components/ui/state-views";
 import {
   Table,
@@ -46,7 +47,12 @@ export default async function FinishedGoodsPage() {
                 const available = product.currentStock - product.reservedStock;
                 return (
                   <TableRow key={product.id}>
-                    <TableCell className="text-center font-medium">{product.name}</TableCell>
+                    <TableCell>
+                      <div className="flex items-center justify-center gap-3 text-left font-medium">
+                        <ProductImage product={product} size={44} />
+                        <span>{product.name}</span>
+                      </div>
+                    </TableCell>
                     <TableCell className="text-center"><div className="flex justify-center"><QuantityCell value={formatQuantity(product.currentStock, "pcs")} /></div></TableCell>
                     <TableCell className="text-center"><div className="flex justify-center"><QuantityCell value={formatQuantity(product.reservedStock, "pcs")} muted /></div></TableCell>
                     <TableCell className="text-center">

@@ -83,6 +83,69 @@ export default async function PurchasesPage() {
           </Table>
         </CardContent>
       </Card>
+
+      <Card>
+        <CardHeader>
+          <CardTitle>Purchase Lists</CardTitle>
+          <CardDescription>Material shortage plans generated from production batches before receipts are recorded.</CardDescription>
+        </CardHeader>
+        <CardContent>
+          <Table>
+              <TableHeader>
+                <TableRow>
+                  <TableHead>Created</TableHead>
+                  <TableHead>Batch</TableHead>
+                  <TableHead>Supplier Groups</TableHead>
+                  <TableHead>Materials</TableHead>
+                  <TableHead>Status</TableHead>
+                  <TableHead>Receipt</TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {state.purchaseLists.length ? state.purchaseLists.map((list) => {
+                  const lines = state.purchaseListLines.filter((line) => line.purchaseListId === list.id);
+                  const batch = state.productionBatches.find((item) => item.id === list.productionBatchId);
+                  const product = state.products.find((item) => item.id === batch?.productId);
+                  const suppliers = new Set(lines.map((line) => line.supplierId ?? "unassigned"));
+                  const receipt = state.purchases.find((purchase) => purchase.purchaseListId === list.id);
+                  return (
+                    <TableRow key={list.id}>
+                      <TableCell>{formatDate(list.createdAt)}</TableCell>
+                      <TableCell>{product?.name ?? "Unknown batch"}</TableCell>
+                      <TableCell>{suppliers.size}</TableCell>
+                      <TableCell>
+                        <div className="flex flex-col gap-0.5">
+                          {lines.map((line) => {
+                            const variant = state.materialVariants.find((item) => item.id === line.materialVariantId);
+                            const supplier = state.suppliers.find((item) => item.id === line.supplierId);
+                            return (
+                              <span key={line.id} className="text-sm">
+                                {variant?.name ?? "Unknown material"} - {supplier?.name ?? "Unassigned"}
+                              </span>
+                            );
+                          })}
+                        </div>
+                      </TableCell>
+                      <TableCell>{list.status}</TableCell>
+                      <TableCell>
+                        {receipt ? formatDate(receipt.date) : <span className="text-sm text-muted-foreground">Not received</span>}
+                      </TableCell>
+                    </TableRow>
+                  );
+                }) : (
+                  <TableRow>
+                    <TableCell colSpan={6} className="h-40">
+                      <EmptyState
+                        title="No purchase lists"
+                        description="Create one from a production batch when materials are short."
+                      />
+                    </TableCell>
+                  </TableRow>
+                )}
+              </TableBody>
+          </Table>
+        </CardContent>
+      </Card>
     </>
   );
 }

@@ -96,13 +96,13 @@ begin
   insert into public.products (
     id, owner_id, name, sku, category, selling_price, labor_minutes,
     labor_rate_per_hour, packaging_cost, overhead_cost, target_margin,
-    current_stock, reserved_stock, active
+    current_stock, reserved_stock, active, photo_url
   )
   values
-    ('00000000-0000-0000-0000-000000000501', v_owner, 'Cherry Blossoms', 'FLOWER-CHERRY-BLOSSOMS', 'Flower', 35000, 18, 20000, 1000, 1500, 0.45, 6, 2, true),
-    ('00000000-0000-0000-0000-000000000502', v_owner, 'Orchid', 'FLOWER-ORCHID', 'Flower', 45000, 24, 20000, 1000, 1800, 0.45, 3, 1, true),
-    ('00000000-0000-0000-0000-000000000503', v_owner, 'Hydrangea', 'FLOWER-HYDRANGEA', 'Flower', 65000, 42, 20000, 1200, 2500, 0.50, 2, 0, true),
-    ('00000000-0000-0000-0000-000000000504', v_owner, 'Puffy Blush Bloom', 'FLOWER-PUFFY-BLUSH', 'Flower', 52000, 30, 20000, 1200, 2200, 0.48, 4, 1, true)
+    ('00000000-0000-0000-0000-000000000501', v_owner, 'Cherry Blossoms', 'FLOWER-CHERRY-BLOSSOMS', 'Flower', 35000, 18, 20000, 1000, 1500, 0.45, 6, 2, true, '/flowers/cherry-blossoms.svg'),
+    ('00000000-0000-0000-0000-000000000502', v_owner, 'Orchid', 'FLOWER-ORCHID', 'Flower', 45000, 24, 20000, 1000, 1800, 0.45, 3, 1, true, '/flowers/orchid.svg'),
+    ('00000000-0000-0000-0000-000000000503', v_owner, 'Hydrangea', 'FLOWER-HYDRANGEA', 'Flower', 65000, 42, 20000, 1200, 2500, 0.50, 2, 0, true, '/flowers/hydrangea.svg'),
+    ('00000000-0000-0000-0000-000000000504', v_owner, 'Puffy Blush Bloom', 'FLOWER-PUFFY-BLUSH', 'Flower', 52000, 30, 20000, 1200, 2200, 0.48, 4, 1, true, '/flowers/puffy-blush.svg')
   on conflict (owner_id, sku) do nothing;
 
   insert into public.product_bom_lines (

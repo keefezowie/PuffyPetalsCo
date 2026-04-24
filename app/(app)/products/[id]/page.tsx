@@ -5,6 +5,7 @@ import { ProductEditForm } from "@/components/forms/master-data-forms";
 import { KpiCard, PageHeader } from "@/components/layout/page-helpers";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { ProductImage } from "@/components/ui/product-image";
 import {
   Table,
   TableBody,
@@ -50,6 +51,7 @@ export default async function ProductDetailPage({
         title={product.name}
         description={`${product.sku} · Product detail and BOM editor preview.`}
         eyebrow="Product detail"
+        meta={<ProductImage product={product} size={72} className="rounded-lg" />}
         action={<ProductEditForm state={state} product={product} />}
       />
 

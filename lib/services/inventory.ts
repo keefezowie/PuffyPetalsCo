@@ -6,14 +6,20 @@ import type {
   MaterialVariant,
   Order,
   OrderItem,
+  OrderProductionPlan,
   Product,
   ProductBomLine,
   ProductCostBreakdown,
   ProductionBatch,
   ProductionBatchLine,
+  ProductionBatchOrderLink,
   ProductionFeasibility,
+  ProductionPlanMode,
   Purchase,
   PurchaseLine,
+  PurchaseList,
+  PurchaseListLine,
+  PurchaseListPlan,
   Unit,
 } from "@/lib/types";
 
@@ -256,6 +262,316 @@ export function canProduce(
   };
 }
 
+export function planProductionFromOrder(
+  state: InventoryState,
+  orderId: string,
+  mode: ProductionPlanMode,
+): OrderProductionPlan {
+  const order = getOrder(state, orderId);
+  const orderItems = state.orderItems.filter((item) => item.orderId === order.id);
+  const orderedByProduct = orderItems.reduce<Record<string, number>>((acc, item) => {
+    acc[item.productId] = (acc[item.productId] ?? 0) + item.quantity;
+    return acc;
+  }, {});
+  const openBatchIds = new Set(
+    state.productionBatches
+      .filter((batch) => batch.status === "planned" || batch.status === "in_progress")
+      .map((batch) => batch.id),
+  );
+  const openByProduct = state.productionBatchOrderLinks
+    .filter((link) => link.orderId === order.id && openBatchIds.has(link.productionBatchId))
+    .reduce<Record<string, number>>((acc, link) => {
+      acc[link.productId] = (acc[link.productId] ?? 0) + link.quantityPlanned;
+      return acc;
+    }, {});
+  const lines = Object.entries(orderedByProduct).map(([productId, orderedQuantity]) => {
+    const product = getProduct(state, productId);
+    const alreadyOpenQuantity = openByProduct[productId] ?? 0;
+    const targetQuantity =
+      mode === "full"
+        ? orderedQuantity
+        : Math.max(0, orderedQuantity - product.currentStock);
+    return {
+      productId,
+      productName: product.name,
+      orderedQuantity,
+      currentStock: product.currentStock,
+      alreadyOpenQuantity,
+      quantityToProduce: Math.max(0, targetQuantity - alreadyOpenQuantity),
+      mode,
+    };
+  });
+  const warnings = [];
+
+  if (!orderItems.length) {
+    warnings.push("Order has no product lines.");
+  }
+
+  if (order.stockDeducted) {
+    warnings.push("Order is already fulfilled.");
+  }
+
+  return {
+    orderId,
+    mode,
+    lines,
+    hasProduction: lines.some((line) => line.quantityToProduce > 0),
+    warnings,
+  };
+}
+
+export function createPlannedProductionFromOrder(
+  state: InventoryState,
+  input: {
+    ownerId: string;
+    orderId: string;
+    mode: ProductionPlanMode;
+    date: string;
+    notes?: string;
+    createdBy?: string;
+  },
+) {
+  const order = getOrder(state, input.orderId);
+  const plan = planProductionFromOrder(state, input.orderId, input.mode);
+  const batches: ProductionBatch[] = [];
+  const links: ProductionBatchOrderLink[] = [];
+  const orderItems = state.orderItems.filter((item) => item.orderId === input.orderId);
+  const now = new Date().toISOString();
+
+  if (!plan.hasProduction) {
+    throw new Error("No production is required for this order.");
+  }
+
+  for (const line of plan.lines.filter((item) => item.quantityToProduce > 0)) {
+    const cost = calculateProductManufacturingCost(state, line.productId);
+    const batch: ProductionBatch = {
+      id: id("batch"),
+      ownerId: input.ownerId,
+      productId: line.productId,
+      quantityMade: line.quantityToProduce,
+      date: input.date,
+      status: "planned",
+      sourceOrderId: input.orderId,
+      unitManufacturingCost: cost.totalCost,
+      totalManufacturingCost: cost.totalCost * line.quantityToProduce,
+      notes: input.notes,
+    };
+    batches.push(batch);
+
+    let remaining = line.quantityToProduce;
+    for (const item of orderItems.filter((entry) => entry.productId === line.productId)) {
+      if (remaining <= 0) {
+        break;
+      }
+
+      const quantityPlanned = Math.min(item.quantity, remaining);
+      remaining -= quantityPlanned;
+      links.push({
+        id: id("batch_order_link"),
+        ownerId: input.ownerId,
+        productionBatchId: batch.id,
+        orderId: input.orderId,
+        orderItemId: item.id,
+        productId: line.productId,
+        quantityPlanned,
+        createdAt: now,
+      });
+    }
+  }
+
+  return {
+    state: {
+      ...state,
+      productionBatches: [...batches, ...state.productionBatches],
+      productionBatchOrderLinks: [...links, ...state.productionBatchOrderLinks],
+      orders: state.orders.map((item) =>
+        item.id === order.id &&
+        (item.status === "draft" || item.status === "confirmed")
+          ? { ...item, status: "in_production" }
+          : item,
+      ),
+    },
+    plan,
+    batches,
+    links,
+  };
+}
+
+export function completeProductionBatch(
+  state: InventoryState,
+  input: {
+    productionBatchId: string;
+    date?: string;
+    notes?: string;
+    createdBy?: string;
+  },
+) {
+  const existingBatch = getProductionBatch(state, input.productionBatchId);
+
+  if (existingBatch.status === "completed") {
+    throw new Error("Production batch is already completed.");
+  }
+
+  if (existingBatch.status === "cancelled") {
+    throw new Error("Cancelled production batches cannot be completed.");
+  }
+
+  const withoutBatchState: InventoryState = {
+    ...state,
+    productionBatches: state.productionBatches.filter(
+      (batch) => batch.id !== existingBatch.id,
+    ),
+  };
+  const completed = createProductionBatch(withoutBatchState, {
+    ownerId: existingBatch.ownerId,
+    productId: existingBatch.productId,
+    quantityMade: existingBatch.quantityMade,
+    date: input.date ?? existingBatch.date,
+    notes: input.notes ?? existingBatch.notes,
+    createdBy: input.createdBy,
+  });
+  const completedBatch: ProductionBatch = {
+    ...completed.batch,
+    id: existingBatch.id,
+    sourceOrderId: existingBatch.sourceOrderId,
+    notes: input.notes ?? existingBatch.notes,
+    completedAt: new Date().toISOString(),
+    completedBy: input.createdBy,
+  };
+  const batchLines = completed.batchLines.map((line) => ({
+    ...line,
+    productionBatchId: existingBatch.id,
+  }));
+  const movements = completed.movements.map((move) => ({
+    ...move,
+    referenceId: existingBatch.id,
+  }));
+
+  return {
+    state: {
+      ...completed.state,
+      productionBatches: [
+        completedBatch,
+        ...completed.state.productionBatches.filter(
+          (batch) => batch.id !== completed.batch.id,
+        ),
+      ],
+      productionBatchLines: [
+        ...batchLines,
+        ...completed.state.productionBatchLines.filter(
+          (line) => line.productionBatchId !== completed.batch.id,
+        ),
+      ],
+      inventoryMovements: [
+        ...movements,
+        ...completed.state.inventoryMovements.filter(
+          (move) => move.referenceId !== completed.batch.id,
+        ),
+      ],
+    },
+    batch: completedBatch,
+    batchLines,
+    movements,
+  };
+}
+
+export function planPurchaseListFromBatch(
+  state: InventoryState,
+  productionBatchId: string,
+): PurchaseListPlan {
+  const batch = getProductionBatch(state, productionBatchId);
+  const product = getProduct(state, batch.productId);
+  const costLines = calculateBomLineCosts(state, batch.productId);
+  const lines = costLines
+    .map((line) => {
+      const variant = getVariant(state, line.materialVariantId);
+      const material = getMaterialForVariant(state, variant);
+      const supplier = material.preferredSupplierId
+        ? state.suppliers.find((item) => item.id === material.preferredSupplierId)
+        : undefined;
+      const requiredQuantity = line.effectiveQuantity * batch.quantityMade;
+      const shortageQuantity = Math.max(0, requiredQuantity - variant.stockQuantity);
+      return {
+        materialVariantId: variant.id,
+        materialName: line.materialName,
+        supplierId: supplier?.id,
+        supplierName: supplier?.name,
+        requiredQuantity,
+        availableQuantity: variant.stockQuantity,
+        shortageQuantity,
+        recommendedPurchaseQuantity: shortageQuantity,
+        purchaseUnit: material.purchaseUnit,
+        usageUnit: variant.usageUnit,
+      };
+    })
+    .filter((line) => line.shortageQuantity > 0);
+  const warnings = [];
+
+  if (!costLines.length) {
+    warnings.push(`${product.name} has no active BOM lines.`);
+  }
+
+  if (batch.status === "completed") {
+    warnings.push("Batch is already completed; purchase planning reflects current stock only.");
+  }
+
+  return {
+    productionBatchId,
+    lines,
+    hasShortages: lines.length > 0,
+    warnings,
+  };
+}
+
+export function createPurchaseListFromBatch(
+  state: InventoryState,
+  input: {
+    ownerId: string;
+    productionBatchId: string;
+    notes?: string;
+  },
+) {
+  const plan = planPurchaseListFromBatch(state, input.productionBatchId);
+  const now = new Date().toISOString();
+  const purchaseList: PurchaseList = {
+    id: id("purchase_list"),
+    ownerId: input.ownerId,
+    productionBatchId: input.productionBatchId,
+    status: "draft" as const,
+    createdAt: now,
+    notes: input.notes,
+  };
+  const purchaseListLines: PurchaseListLine[] = plan.lines.map((line) => ({
+    id: id("purchase_list_line"),
+    ownerId: input.ownerId,
+    purchaseListId: purchaseList.id,
+    materialVariantId: line.materialVariantId,
+    supplierId: line.supplierId,
+    requiredQuantity: line.requiredQuantity,
+    availableQuantity: line.availableQuantity,
+    shortageQuantity: line.shortageQuantity,
+    recommendedPurchaseQuantity: line.recommendedPurchaseQuantity,
+    purchaseUnit: line.purchaseUnit,
+    usageUnit: line.usageUnit,
+    notes: line.supplierName ? undefined : "No preferred supplier assigned.",
+  }));
+
+  if (!plan.hasShortages) {
+    throw new Error("No material shortages were found for this batch.");
+  }
+
+  return {
+    state: {
+      ...state,
+      purchaseLists: [purchaseList, ...state.purchaseLists],
+      purchaseListLines: [...purchaseListLines, ...state.purchaseListLines],
+    },
+    plan,
+    purchaseList,
+    purchaseListLines,
+  };
+}
+
 export function createProductionBatch(
   state: InventoryState,
   input: {
@@ -285,9 +601,12 @@ export function createProductionBatch(
     productId: input.productId,
     quantityMade: input.quantityMade,
     date: input.date,
+    status: "completed",
     unitManufacturingCost: cost.totalCost,
     totalManufacturingCost: cost.totalCost * input.quantityMade,
     notes: input.notes,
+    completedAt: input.date,
+    completedBy: input.createdBy,
   };
   const batchLines: ProductionBatchLine[] = feasibility.lines.map((line) => ({
     id: id("batch_line"),
@@ -384,6 +703,7 @@ export function recordPurchase(
     date: string;
     shippingCost: number;
     discount: number;
+    purchaseListId?: string;
     notes?: string;
     receiptUrl?: string;
     lines: Array<{
@@ -409,6 +729,7 @@ export function recordPurchase(
     id: id("purchase"),
     ownerId: input.ownerId,
     supplierId: input.supplierId,
+    purchaseListId: input.purchaseListId,
     date: input.date,
     subtotal,
     shippingCost: input.shippingCost,
@@ -759,4 +1080,17 @@ function getOrder(state: InventoryState, orderId: string) {
     throw new Error(`Order not found: ${orderId}`);
   }
   return order;
+}
+
+function getProductionBatch(
+  state: InventoryState,
+  productionBatchId: string,
+): ProductionBatch {
+  const batch = state.productionBatches.find(
+    (item) => item.id === productionBatchId,
+  );
+  if (!batch) {
+    throw new Error(`Production batch not found: ${productionBatchId}`);
+  }
+  return batch;
 }

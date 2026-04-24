@@ -16,8 +16,11 @@ import type {
   ProductBomLine,
   ProductionBatch,
   ProductionBatchLine,
+  ProductionBatchOrderLink,
   Purchase,
   PurchaseLine,
+  PurchaseList,
+  PurchaseListLine,
   Settings,
   Supplier,
   Unit,
@@ -65,6 +68,9 @@ export async function getInventoryState(): Promise<InventoryState> {
     purchaseLines,
     productionBatches,
     productionBatchLines,
+    productionBatchOrderLinks,
+    purchaseLists,
+    purchaseListLines,
     inventoryMovements,
     orders,
     orderItems,
@@ -81,6 +87,9 @@ export async function getInventoryState(): Promise<InventoryState> {
     listRows<PurchaseLineRow>(db, "purchase_lines", user.id, "created_at", false),
     listRows<ProductionBatchRow>(db, "production_batches", user.id, "date", false),
     listRows<ProductionBatchLineRow>(db, "production_batch_lines", user.id, "created_at", false),
+    listRows<ProductionBatchOrderLinkRow>(db, "production_batch_order_links", user.id, "created_at", false),
+    listRows<PurchaseListRow>(db, "purchase_lists", user.id, "created_at", false),
+    listRows<PurchaseListLineRow>(db, "purchase_list_lines", user.id, "created_at", false),
     listRows<InventoryMovementRow>(db, "inventory_movements", user.id, "occurred_at", false),
     listRows<OrderRow>(db, "orders", user.id, "order_date", false),
     listRows<OrderItemRow>(db, "order_items", user.id, "created_at", false),
@@ -99,6 +108,9 @@ export async function getInventoryState(): Promise<InventoryState> {
     purchaseLines: purchaseLines.map(mapPurchaseLine),
     productionBatches: productionBatches.map(mapProductionBatch),
     productionBatchLines: productionBatchLines.map(mapProductionBatchLine),
+    productionBatchOrderLinks: productionBatchOrderLinks.map(mapProductionBatchOrderLink),
+    purchaseLists: purchaseLists.map(mapPurchaseList),
+    purchaseListLines: purchaseListLines.map(mapPurchaseListLine),
     inventoryMovements: inventoryMovements.map((row) => ({
       id: row.id,
       ownerId: row.owner_id,
@@ -288,6 +300,7 @@ function mapPurchase(row: PurchaseRow): Purchase {
     ownerId: row.owner_id,
     date: row.date,
     supplierId: row.supplier_id,
+    purchaseListId: row.purchase_list_id ?? undefined,
     subtotal: row.subtotal,
     shippingCost: row.shipping_cost,
     discount: row.discount,
@@ -323,9 +336,13 @@ function mapProductionBatch(row: ProductionBatchRow): ProductionBatch {
     productId: row.product_id,
     quantityMade: Number(row.quantity_made),
     date: row.date,
+    status: row.status,
+    sourceOrderId: row.source_order_id ?? undefined,
     unitManufacturingCost: Number(row.unit_manufacturing_cost),
     totalManufacturingCost: Number(row.total_manufacturing_cost),
     notes: row.notes ?? undefined,
+    completedAt: row.completed_at ?? undefined,
+    completedBy: row.completed_by ?? undefined,
   };
 }
 
@@ -339,6 +356,49 @@ function mapProductionBatchLine(row: ProductionBatchLineRow): ProductionBatchLin
     unitCost: Number(row.unit_cost),
     totalCost: Number(row.total_cost),
     usageUnit: row.usage_unit,
+  };
+}
+
+function mapProductionBatchOrderLink(
+  row: ProductionBatchOrderLinkRow,
+): ProductionBatchOrderLink {
+  return {
+    id: row.id,
+    ownerId: row.owner_id,
+    productionBatchId: row.production_batch_id,
+    orderId: row.order_id,
+    orderItemId: row.order_item_id ?? undefined,
+    productId: row.product_id,
+    quantityPlanned: Number(row.quantity_planned),
+    createdAt: row.created_at,
+  };
+}
+
+function mapPurchaseList(row: PurchaseListRow): PurchaseList {
+  return {
+    id: row.id,
+    ownerId: row.owner_id,
+    productionBatchId: row.production_batch_id,
+    status: row.status,
+    createdAt: row.created_at,
+    notes: row.notes ?? undefined,
+  };
+}
+
+function mapPurchaseListLine(row: PurchaseListLineRow): PurchaseListLine {
+  return {
+    id: row.id,
+    ownerId: row.owner_id,
+    purchaseListId: row.purchase_list_id,
+    materialVariantId: row.material_variant_id,
+    supplierId: row.supplier_id ?? undefined,
+    requiredQuantity: Number(row.required_quantity),
+    availableQuantity: Number(row.available_quantity),
+    shortageQuantity: Number(row.shortage_quantity),
+    recommendedPurchaseQuantity: Number(row.recommended_purchase_quantity),
+    purchaseUnit: row.purchase_unit,
+    usageUnit: row.usage_unit,
+    notes: row.notes ?? undefined,
   };
 }
 
@@ -511,6 +571,7 @@ type PurchaseRow = {
   owner_id: string;
   date: string;
   supplier_id: string;
+  purchase_list_id: string | null;
   subtotal: number;
   shipping_cost: number;
   discount: number;
@@ -542,9 +603,13 @@ type ProductionBatchRow = {
   product_id: string;
   quantity_made: number | string;
   date: string;
+  status: Enums["production_batch_status"];
+  source_order_id: string | null;
   unit_manufacturing_cost: number | string;
   total_manufacturing_cost: number | string;
   notes: string | null;
+  completed_at: string | null;
+  completed_by: string | null;
 };
 
 type ProductionBatchLineRow = {
@@ -556,6 +621,41 @@ type ProductionBatchLineRow = {
   unit_cost: number | string;
   total_cost: number | string;
   usage_unit: Unit;
+};
+
+type ProductionBatchOrderLinkRow = {
+  id: string;
+  owner_id: string;
+  production_batch_id: string;
+  order_id: string;
+  order_item_id: string | null;
+  product_id: string;
+  quantity_planned: number | string;
+  created_at: string;
+};
+
+type PurchaseListRow = {
+  id: string;
+  owner_id: string;
+  production_batch_id: string;
+  status: Enums["purchase_list_status"];
+  created_at: string;
+  notes: string | null;
+};
+
+type PurchaseListLineRow = {
+  id: string;
+  owner_id: string;
+  purchase_list_id: string;
+  material_variant_id: string;
+  supplier_id: string | null;
+  required_quantity: number | string;
+  available_quantity: number | string;
+  shortage_quantity: number | string;
+  recommended_purchase_quantity: number | string;
+  purchase_unit: Unit;
+  usage_unit: Unit;
+  notes: string | null;
 };
 
 type InventoryMovementRow = {

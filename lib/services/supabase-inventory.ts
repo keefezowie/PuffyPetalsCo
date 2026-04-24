@@ -12,6 +12,7 @@ import type {
   MaterialCategory,
   OrderStatus,
   PaymentStatus,
+  ProductionPlanMode,
   SalesPlatform,
   Unit,
 } from "@/lib/types";
@@ -20,7 +21,7 @@ type RpcClient = {
   rpc: (
     functionName: string,
     args: Record<string, unknown>,
-  ) => Promise<{ data: string | null; error: { message: string } | null }>;
+  ) => Promise<{ data: unknown; error: { message: string } | null }>;
 };
 
 type DbError = { message: string };
@@ -142,12 +143,86 @@ export async function createProductionBatchAction(input: {
   return data;
 }
 
+export async function planProductionFromOrderAction(input: {
+  orderId: string;
+  mode: ProductionPlanMode;
+  date: string;
+  notes?: string;
+}) {
+  const { supabase } = await getMutationContext();
+  const rpc = supabase as unknown as RpcClient;
+  const { data, error } = await rpc.rpc("plan_production_from_order", {
+    p_order_id: input.orderId,
+    p_mode: input.mode,
+    p_date: input.date,
+    p_notes: input.notes ?? null,
+  });
+
+  if (error) {
+    throw new Error(error.message);
+  }
+
+  revalidatePath("/orders");
+  revalidatePath(`/orders/${input.orderId}`);
+  revalidatePath("/production");
+  revalidatePath("/dashboard");
+  return data;
+}
+
+export async function completeProductionBatchAction(input: {
+  productionBatchId: string;
+  date?: string;
+  notes?: string;
+}) {
+  const { supabase } = await getMutationContext();
+  const rpc = supabase as unknown as RpcClient;
+  const { data, error } = await rpc.rpc("complete_production_batch", {
+    p_production_batch_id: input.productionBatchId,
+    p_date: input.date ?? null,
+    p_notes: input.notes ?? null,
+  });
+
+  if (error) {
+    throw new Error(error.message);
+  }
+
+  revalidatePath("/production");
+  revalidatePath(`/production/${input.productionBatchId}`);
+  revalidatePath("/materials");
+  revalidatePath("/finished-goods");
+  revalidatePath("/dashboard");
+  return data;
+}
+
+export async function createPurchaseListFromBatchAction(input: {
+  productionBatchId: string;
+  notes?: string;
+}) {
+  const { supabase } = await getMutationContext();
+  const rpc = supabase as unknown as RpcClient;
+  const { data, error } = await rpc.rpc("create_purchase_list_from_batch", {
+    p_production_batch_id: input.productionBatchId,
+    p_notes: input.notes ?? null,
+  });
+
+  if (error) {
+    throw new Error(error.message);
+  }
+
+  revalidatePath("/production");
+  revalidatePath(`/production/${input.productionBatchId}`);
+  revalidatePath("/purchases");
+  revalidatePath("/dashboard");
+  return data;
+}
+
 export async function recordPurchaseAction(input: {
   supplierId: string;
   date: string;
   shippingCost: number;
   discount: number;
   lines: Json;
+  purchaseListId?: string;
   purchaseUrl?: string;
   notes?: string;
 }) {
@@ -159,6 +234,7 @@ export async function recordPurchaseAction(input: {
     p_shipping_cost: input.shippingCost,
     p_discount: input.discount,
     p_lines: input.lines,
+    p_purchase_list_id: input.purchaseListId ?? null,
     p_notes: input.notes ?? null,
   });
 

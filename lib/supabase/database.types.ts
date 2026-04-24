@@ -44,6 +44,8 @@ export type Database = {
       payment_status: "unpaid" | "partial" | "paid" | "refunded";
       fulfillment_status: "unfulfilled" | "reserved" | "fulfilled" | "returned";
       costing_method: "latest_purchase" | "weighted_average" | "fifo";
+      production_batch_status: "planned" | "in_progress" | "completed" | "cancelled";
+      purchase_list_status: "draft" | "ordered" | "received" | "cancelled";
     };
     Tables: {
       materials: {
@@ -175,6 +177,30 @@ export type Database = {
         };
         Returns: string;
       };
+      plan_production_from_order: {
+        Args: {
+          p_order_id: string;
+          p_mode: string;
+          p_date?: string;
+          p_notes?: string | null;
+        };
+        Returns: string[];
+      };
+      complete_production_batch: {
+        Args: {
+          p_production_batch_id: string;
+          p_date?: string;
+          p_notes?: string | null;
+        };
+        Returns: string;
+      };
+      create_purchase_list_from_batch: {
+        Args: {
+          p_production_batch_id: string;
+          p_notes?: string | null;
+        };
+        Returns: string;
+      };
       record_purchase: {
         Args: {
           p_supplier_id: string;
@@ -182,6 +208,7 @@ export type Database = {
           p_shipping_cost: number;
           p_discount: number;
           p_lines: Json;
+          p_purchase_list_id?: string | null;
           p_notes?: string | null;
         };
         Returns: string;

@@ -4,6 +4,7 @@ import { OrderCreateForm } from "@/components/forms/master-data-forms";
 import { PageHeader } from "@/components/layout/page-helpers";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { MoneyCell, StatusBadge } from "@/components/ui/data-display";
+import { ProductImage } from "@/components/ui/product-image";
 import { EmptyState } from "@/components/ui/state-views";
 import {
   Table,
@@ -64,7 +65,8 @@ export default async function OrdersPage() {
                           {items.map((item) => {
                             const product = state.products.find((entry) => entry.id === item.productId);
                             return (
-                              <span key={item.id} className="text-sm">
+                              <span key={item.id} className="flex items-center gap-2 text-sm">
+                                {product ? <ProductImage product={product} size={28} /> : null}
                                 {product?.name ?? "Unknown product"} x {item.quantity}
                               </span>
                             );

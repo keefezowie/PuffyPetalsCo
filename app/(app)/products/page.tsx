@@ -17,6 +17,7 @@ export default async function ProductsPage() {
       id: product.id,
       name: product.name,
       sku: product.sku,
+      photoUrl: product.photoUrl,
       sellingPrice: product.sellingPrice,
       manufacturingCost: cost,
       grossMargin:

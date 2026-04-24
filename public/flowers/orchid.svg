@@ -1,0 +1,11 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 256 256" role="img" aria-label="Orchid">
+  <rect width="256" height="256" fill="#f4f0fb"/>
+  <path d="M126 212c-4-48 2-89 18-124" fill="none" stroke="#7a816c" stroke-width="10" stroke-linecap="round"/>
+  <ellipse cx="128" cy="89" rx="32" ry="57" fill="#b78fd3" transform="rotate(-6 128 89)"/>
+  <ellipse cx="87" cy="124" rx="42" ry="27" fill="#d5b4e5" transform="rotate(-28 87 124)"/>
+  <ellipse cx="171" cy="123" rx="42" ry="27" fill="#d5b4e5" transform="rotate(28 171 123)"/>
+  <ellipse cx="113" cy="155" rx="24" ry="38" fill="#c79bdc" transform="rotate(22 113 155)"/>
+  <ellipse cx="148" cy="155" rx="24" ry="38" fill="#c79bdc" transform="rotate(-22 148 155)"/>
+  <circle cx="130" cy="129" r="19" fill="#fff7e8"/>
+  <path d="M116 132c10 12 20 12 30 0" fill="none" stroke="#ae6965" stroke-width="7" stroke-linecap="round"/>
+</svg>

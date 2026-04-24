@@ -28,6 +28,10 @@ export type FulfillmentStatus = "unfulfilled" | "reserved" | "fulfilled" | "retu
 
 export type SalesPlatform = "Shopee" | "Instagram" | "WhatsApp" | "Offline" | "Other";
 
+export type ProductionBatchStatus = "planned" | "in_progress" | "completed" | "cancelled";
+
+export type PurchaseListStatus = "draft" | "ordered" | "received" | "cancelled";
+
 export type MovementType =
   | "purchase"
   | "production_consumption"
@@ -139,6 +143,7 @@ export interface Purchase {
   ownerId: string;
   date: string;
   supplierId: string;
+  purchaseListId?: string;
   subtotal: number;
   shippingCost: number;
   discount: number;
@@ -170,9 +175,13 @@ export interface ProductionBatch {
   productId: string;
   quantityMade: number;
   date: string;
+  status: ProductionBatchStatus;
+  sourceOrderId?: string;
   unitManufacturingCost: number;
   totalManufacturingCost: number;
   notes?: string;
+  completedAt?: string;
+  completedBy?: string;
 }
 
 export interface ProductionBatchLine {
@@ -202,6 +211,41 @@ export interface InventoryMovement {
   referenceId: string;
   notes?: string;
   createdBy?: string;
+}
+
+export interface ProductionBatchOrderLink {
+  id: string;
+  ownerId: string;
+  productionBatchId: string;
+  orderId: string;
+  orderItemId?: string;
+  productId: string;
+  quantityPlanned: number;
+  createdAt: string;
+}
+
+export interface PurchaseList {
+  id: string;
+  ownerId: string;
+  productionBatchId: string;
+  status: PurchaseListStatus;
+  createdAt: string;
+  notes?: string;
+}
+
+export interface PurchaseListLine {
+  id: string;
+  ownerId: string;
+  purchaseListId: string;
+  materialVariantId: string;
+  supplierId?: string;
+  requiredQuantity: number;
+  availableQuantity: number;
+  shortageQuantity: number;
+  recommendedPurchaseQuantity: number;
+  purchaseUnit: Unit;
+  usageUnit: Unit;
+  notes?: string;
 }
 
 export interface Order {
@@ -276,6 +320,9 @@ export interface InventoryState {
   purchaseLines: PurchaseLine[];
   productionBatches: ProductionBatch[];
   productionBatchLines: ProductionBatchLine[];
+  productionBatchOrderLinks: ProductionBatchOrderLink[];
+  purchaseLists: PurchaseList[];
+  purchaseListLines: PurchaseListLine[];
   inventoryMovements: InventoryMovement[];
   orders: Order[];
   orderItems: OrderItem[];
@@ -324,6 +371,46 @@ export interface ProductionFeasibility {
   maxProducibleQuantity: number;
   limitingMaterial?: string;
   lines: ProductionFeasibilityLine[];
+  warnings: string[];
+}
+
+export type ProductionPlanMode = "shortage" | "full";
+
+export interface OrderProductionPlanLine {
+  productId: string;
+  productName: string;
+  orderedQuantity: number;
+  currentStock: number;
+  alreadyOpenQuantity: number;
+  quantityToProduce: number;
+  mode: ProductionPlanMode;
+}
+
+export interface OrderProductionPlan {
+  orderId: string;
+  mode: ProductionPlanMode;
+  lines: OrderProductionPlanLine[];
+  hasProduction: boolean;
+  warnings: string[];
+}
+
+export interface PurchaseListPlanLine {
+  materialVariantId: string;
+  materialName: string;
+  supplierId?: string;
+  supplierName?: string;
+  requiredQuantity: number;
+  availableQuantity: number;
+  shortageQuantity: number;
+  recommendedPurchaseQuantity: number;
+  purchaseUnit: Unit;
+  usageUnit: Unit;
+}
+
+export interface PurchaseListPlan {
+  productionBatchId: string;
+  lines: PurchaseListPlanLine[];
+  hasShortages: boolean;
   warnings: string[];
 }
 

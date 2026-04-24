@@ -1,0 +1,13 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 256 256" role="img" aria-label="Flower placeholder">
+  <rect width="256" height="256" fill="#f3eee7"/>
+  <circle cx="128" cy="128" r="94" fill="#d8cabc"/>
+  <g fill="#d1a9a5">
+    <circle cx="128" cy="72" r="38"/>
+    <circle cx="178" cy="111" r="38"/>
+    <circle cx="158" cy="173" r="38"/>
+    <circle cx="98" cy="173" r="38"/>
+    <circle cx="78" cy="111" r="38"/>
+  </g>
+  <circle cx="128" cy="128" r="34" fill="#a58b71"/>
+  <circle cx="128" cy="128" r="15" fill="#fffaf4"/>
+</svg>
