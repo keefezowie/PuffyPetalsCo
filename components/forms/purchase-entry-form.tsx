@@ -1,22 +1,23 @@
 "use client";
 
 import { PackagePlus } from "lucide-react";
-import { useMemo } from "react";
+import { useMemo, useTransition } from "react";
 import { useRouter } from "next/navigation";
-import { useFormStatus } from "react-dom";
 import { toast } from "sonner";
 
-import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Field, FieldDescription, FieldGroup, FieldLabel } from "@/components/ui/field";
 import { Input } from "@/components/ui/input";
+import { PendingButton } from "@/components/ui/pending-button";
 import { Select, SelectContent, SelectGroup, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { RefreshingIndicator } from "@/components/ui/state-views";
 import { formatQuantity, formatRupiahDecimal } from "@/lib/formatters";
 import { recordPurchaseAction } from "@/lib/services/supabase-inventory";
 import type { InventoryState } from "@/lib/types";
 
 export function PurchaseEntryForm({ state }: { state: InventoryState }) {
   const router = useRouter();
+  const [isRefreshing, startRefresh] = useTransition();
   const defaultSupplier = state.suppliers[0]?.id ?? "";
   const defaultVariant =
     state.materialVariants.find((variant) => variant.sizeMm === 12)?.id ??
@@ -73,7 +74,9 @@ export function PurchaseEntryForm({ state }: { state: InventoryState }) {
       toast.success("Purchase saved", {
         description: "Material stock, latest cost, movement log, and price history were updated.",
       });
-      router.refresh();
+      startRefresh(() => {
+        router.refresh();
+      });
     } catch (error) {
       toast.error("Purchase failed", {
         description: error instanceof Error ? error.message : "Unknown purchase error.",
@@ -93,7 +96,7 @@ export function PurchaseEntryForm({ state }: { state: InventoryState }) {
         </CardDescription>
       </CardHeader>
       <CardContent>
-        <form action={action} className="flex flex-col gap-5">
+        <form action={action} className="flex flex-col gap-5" aria-busy={isRefreshing}>
           <FieldGroup>
             <Field>
               <FieldLabel>Supplier</FieldLabel>
@@ -177,18 +180,12 @@ export function PurchaseEntryForm({ state }: { state: InventoryState }) {
               <Input id="notes" name="notes" placeholder="Shopee order, receipt number, or supplier note" />
             </Field>
           </FieldGroup>
-          <SubmitButton disabled={!defaultSupplier || !defaultVariant} />
+          <PendingButton type="submit" disabled={!defaultSupplier || !defaultVariant} pendingText="Saving purchase...">
+            Save purchase
+          </PendingButton>
+          <RefreshingIndicator show={isRefreshing} />
         </form>
       </CardContent>
     </Card>
-  );
-}
-
-function SubmitButton({ disabled }: { disabled: boolean }) {
-  const status = useFormStatus();
-  return (
-    <Button type="submit" disabled={disabled || status.pending}>
-      {status.pending ? "Saving..." : "Save purchase"}
-    </Button>
   );
 }

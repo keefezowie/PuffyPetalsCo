@@ -1,6 +1,7 @@
 import { notFound } from "next/navigation";
+import { BadgePercent, CircleDollarSign, Factory, Sparkles } from "lucide-react";
 
-import { PageHeader } from "@/components/layout/page-helpers";
+import { KpiCard, PageHeader } from "@/components/layout/page-helpers";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import {
@@ -47,13 +48,14 @@ export default async function ProductDetailPage({
       <PageHeader
         title={product.name}
         description={`${product.sku} · Product detail and BOM editor preview.`}
+        eyebrow="Product detail"
       />
 
       <section className="grid gap-4 md:grid-cols-4">
-        <Metric title="Selling price" value={formatRupiah(product.sellingPrice)} />
-        <Metric title="Manufacturing cost" value={formatRupiah(cost.totalCost)} />
-        <Metric title="Gross margin" value={formatPercent(margin)} />
-        <Metric title="Recommended price" value={formatRupiah(recommendedPrice)} />
+        <KpiCard title="Selling price" value={formatRupiah(product.sellingPrice)} icon={CircleDollarSign} tone="success" />
+        <KpiCard title="Manufacturing cost" value={formatRupiah(cost.totalCost)} icon={Factory} tone="info" />
+        <KpiCard title="Gross margin" value={formatPercent(margin)} icon={BadgePercent} tone={margin < product.targetMargin ? "danger" : "success"} />
+        <KpiCard title="Recommended price" value={formatRupiah(recommendedPrice)} icon={Sparkles} tone="warning" />
       </section>
 
       <Card>
@@ -103,21 +105,12 @@ export default async function ProductDetailPage({
           <CardDescription>Manufacturing cost formula used for price decisions.</CardDescription>
         </CardHeader>
         <CardContent className="grid gap-3 md:grid-cols-4">
-          <Metric title="Materials" value={formatRupiah(cost.materialCost)} />
-          <Metric title="Labor" value={formatRupiah(cost.laborCost)} />
-          <Metric title="Packaging" value={formatRupiah(cost.packagingCost)} />
-          <Metric title="Overhead" value={formatRupiah(cost.overheadCost)} />
+          <KpiCard title="Materials" value={formatRupiah(cost.materialCost)} icon={Factory} tone="neutral" />
+          <KpiCard title="Labor" value={formatRupiah(cost.laborCost)} icon={Factory} tone="neutral" />
+          <KpiCard title="Packaging" value={formatRupiah(cost.packagingCost)} icon={Factory} tone="neutral" />
+          <KpiCard title="Overhead" value={formatRupiah(cost.overheadCost)} icon={Factory} tone="neutral" />
         </CardContent>
       </Card>
     </>
-  );
-}
-
-function Metric({ title, value }: { title: string; value: string }) {
-  return (
-    <div className="rounded-lg border bg-card p-4">
-      <div className="text-sm text-muted-foreground">{title}</div>
-      <div className="mt-1 text-xl font-semibold">{value}</div>
-    </div>
   );
 }

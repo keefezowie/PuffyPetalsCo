@@ -2,19 +2,21 @@
 
 import { SlidersHorizontal } from "lucide-react";
 import { useRouter } from "next/navigation";
-import { useFormStatus } from "react-dom";
+import { useTransition } from "react";
 import { toast } from "sonner";
 
-import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Field, FieldDescription, FieldGroup, FieldLabel } from "@/components/ui/field";
 import { Input } from "@/components/ui/input";
+import { PendingButton } from "@/components/ui/pending-button";
 import { Select, SelectContent, SelectGroup, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { RefreshingIndicator } from "@/components/ui/state-views";
 import { createStockAdjustmentAction } from "@/lib/services/supabase-inventory";
 import type { InventoryState } from "@/lib/types";
 
 export function StockAdjustmentForm({ state }: { state: InventoryState }) {
   const router = useRouter();
+  const [isRefreshing, startRefresh] = useTransition();
   const defaultVariant = state.materialVariants[0]?.id ?? "";
 
   async function action(formData: FormData) {
@@ -38,7 +40,9 @@ export function StockAdjustmentForm({ state }: { state: InventoryState }) {
       toast.success("Stock adjustment saved", {
         description: "The adjustment and matching inventory movement were recorded.",
       });
-      router.refresh();
+      startRefresh(() => {
+        router.refresh();
+      });
     } catch (error) {
       toast.error("Adjustment failed", {
         description: error instanceof Error ? error.message : "Unknown adjustment error.",
@@ -58,7 +62,7 @@ export function StockAdjustmentForm({ state }: { state: InventoryState }) {
         </CardDescription>
       </CardHeader>
       <CardContent>
-        <form action={action} className="flex flex-col gap-5">
+        <form action={action} className="flex flex-col gap-5" aria-busy={isRefreshing}>
           <FieldGroup>
             <Field>
               <FieldLabel>Raw material variant</FieldLabel>
@@ -95,18 +99,12 @@ export function StockAdjustmentForm({ state }: { state: InventoryState }) {
               <Input id="notes" name="notes" placeholder="Optional details" />
             </Field>
           </FieldGroup>
-          <SubmitButton disabled={!defaultVariant} />
+          <PendingButton type="submit" disabled={!defaultVariant} pendingText="Saving adjustment...">
+            Save adjustment
+          </PendingButton>
+          <RefreshingIndicator show={isRefreshing} />
         </form>
       </CardContent>
     </Card>
-  );
-}
-
-function SubmitButton({ disabled }: { disabled: boolean }) {
-  const status = useFormStatus();
-  return (
-    <Button type="submit" disabled={disabled || status.pending}>
-      {status.pending ? "Saving..." : "Save adjustment"}
-    </Button>
   );
 }

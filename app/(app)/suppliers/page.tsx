@@ -1,6 +1,7 @@
 import { PageHeader } from "@/components/layout/page-helpers";
-import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { MoneyCell, StatusBadge } from "@/components/ui/data-display";
+import { EmptyState } from "@/components/ui/state-views";
 import {
   Table,
   TableBody,
@@ -20,6 +21,7 @@ export default async function SuppliersPage() {
       <PageHeader
         title="Suppliers"
         description="Supplier records and price history for purchase decisions."
+        eyebrow="Sourcing"
       />
       <Card>
         <CardHeader>
@@ -37,18 +39,24 @@ export default async function SuppliersPage() {
               </TableRow>
             </TableHeader>
             <TableBody>
-              {state.suppliers.map((supplier) => (
+              {state.suppliers.length ? state.suppliers.map((supplier) => (
                 <TableRow key={supplier.id}>
                   <TableCell className="font-medium">{supplier.name}</TableCell>
                   <TableCell>{supplier.channel}</TableCell>
                   <TableCell>
-                    <Badge variant={supplier.isPreferred ? "secondary" : "outline"}>
+                    <StatusBadge tone={supplier.isPreferred ? "success" : "info"}>
                       {supplier.isPreferred ? "Preferred" : "Backup"}
-                    </Badge>
+                    </StatusBadge>
                   </TableCell>
                   <TableCell>{supplier.notes}</TableCell>
                 </TableRow>
-              ))}
+              )) : (
+                <TableRow>
+                  <TableCell colSpan={4} className="h-40">
+                    <EmptyState title="No suppliers" description="Supplier records will support purchase planning and price history." />
+                  </TableCell>
+                </TableRow>
+              )}
             </TableBody>
           </Table>
         </CardContent>
@@ -71,7 +79,7 @@ export default async function SuppliersPage() {
               </TableRow>
             </TableHeader>
             <TableBody>
-              {state.materialPriceHistory.map((price) => {
+              {state.materialPriceHistory.length ? state.materialPriceHistory.map((price) => {
                 const supplier = state.suppliers.find((item) => item.id === price.supplierId);
                 const variant = state.materialVariants.find((item) => item.id === price.materialVariantId);
                 return (
@@ -79,11 +87,17 @@ export default async function SuppliersPage() {
                     <TableCell>{price.observedAt}</TableCell>
                     <TableCell>{supplier?.name}</TableCell>
                     <TableCell>{variant?.name}</TableCell>
-                    <TableCell>{formatRupiahDecimal(price.packPrice)}</TableCell>
-                    <TableCell>{formatRupiahDecimal(price.costPerUsageUnit)}</TableCell>
+                    <TableCell><MoneyCell value={formatRupiahDecimal(price.packPrice)} /></TableCell>
+                    <TableCell><MoneyCell value={formatRupiahDecimal(price.costPerUsageUnit)} /></TableCell>
                   </TableRow>
                 );
-              })}
+              }) : (
+                <TableRow>
+                  <TableCell colSpan={5} className="h-40">
+                    <EmptyState title="No price history" description="Purchase entries will build supplier cost history over time." />
+                  </TableCell>
+                </TableRow>
+              )}
             </TableBody>
           </Table>
         </CardContent>

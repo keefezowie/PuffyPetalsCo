@@ -1,8 +1,9 @@
 import Link from "next/link";
 
 import { PageHeader } from "@/components/layout/page-helpers";
-import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { MoneyCell, StatusBadge } from "@/components/ui/data-display";
+import { EmptyState } from "@/components/ui/state-views";
 import {
   Table,
   TableBody,
@@ -23,6 +24,7 @@ export default async function OrdersPage() {
       <PageHeader
         title="Orders"
         description="Track platform orders, status, revenue, COGS, and profit without double-deducting stock."
+        eyebrow="Sales operations"
       />
       <Card>
         <CardHeader>
@@ -43,7 +45,7 @@ export default async function OrdersPage() {
               </TableRow>
             </TableHeader>
             <TableBody>
-              {state.orders.map((order) => {
+              {state.orders.length ? state.orders.map((order) => {
                 const profit = calculateOrderProfit(state, order.id);
                 return (
                   <TableRow key={order.id}>
@@ -56,16 +58,25 @@ export default async function OrdersPage() {
                     <TableCell>{formatDate(order.orderDate)}</TableCell>
                     <TableCell>{order.platform}</TableCell>
                     <TableCell>
-                      <Badge variant={order.stockDeducted ? "secondary" : "outline"}>
+                      <StatusBadge tone={order.stockDeducted ? "success" : "warning"}>
                         {order.status.replaceAll("_", " ")}
-                      </Badge>
+                      </StatusBadge>
                     </TableCell>
-                    <TableCell>{formatRupiah(profit.netRevenue)}</TableCell>
-                    <TableCell>{formatRupiah(profit.netProfit)}</TableCell>
+                    <TableCell><MoneyCell value={formatRupiah(profit.netRevenue)} /></TableCell>
+                    <TableCell><MoneyCell value={formatRupiah(profit.netProfit)} /></TableCell>
                     <TableCell>{formatPercent(profit.margin)}</TableCell>
                   </TableRow>
                 );
-              })}
+              }) : (
+                <TableRow>
+                  <TableCell colSpan={7} className="h-40">
+                    <EmptyState
+                      title="No orders recorded"
+                      description="Orders will appear here once sales are imported or entered."
+                    />
+                  </TableCell>
+                </TableRow>
+              )}
             </TableBody>
           </Table>
         </CardContent>

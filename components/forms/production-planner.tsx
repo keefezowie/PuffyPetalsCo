@@ -1,8 +1,8 @@
 "use client";
 
 import { zodResolver } from "@hookform/resolvers/zod";
-import { Factory } from "lucide-react";
-import { useMemo, useState } from "react";
+import { Factory, Loader2 } from "lucide-react";
+import { useMemo, useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import { useForm } from "react-hook-form";
 import { toast } from "sonner";
@@ -14,6 +14,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Field, FieldError, FieldGroup, FieldLabel } from "@/components/ui/field";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectGroup, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { RefreshingIndicator } from "@/components/ui/state-views";
 import {
   Table,
   TableBody,
@@ -38,6 +39,7 @@ export function ProductionPlanner({ initialState }: { initialState: InventorySta
   const router = useRouter();
   const [state] = useState<InventoryState>(initialState);
   const [lastBatchId, setLastBatchId] = useState<string | null>(null);
+  const [isRefreshing, startRefresh] = useTransition();
   const defaultProductId = initialState.products[0]?.id ?? "";
   const form = useForm<ProductionInput, unknown, ProductionValues>({
     resolver: zodResolver(productionSchema),
@@ -62,25 +64,27 @@ export function ProductionPlanner({ initialState }: { initialState: InventorySta
     ? calculateProductManufacturingCost(state, selectedProduct.id)
     : null;
 
-  const onSubmit = form.handleSubmit((payload) => {
-    createProductionBatchAction({
-      productId: payload.productId,
-      quantityMade: payload.quantityMade,
-      date: payload.date,
-      notes: payload.notes,
-    })
-      .then((batchId) => {
-        setLastBatchId(batchId);
-        toast.success("Production batch saved", {
-          description: `${selectedProduct?.name ?? "Product"} stock and material movements were updated.`,
-        });
-        router.refresh();
-      })
-      .catch((error) => {
-        toast.error("Production blocked", {
-          description: error instanceof Error ? error.message : "Unknown production error.",
-        });
+  const onSubmit = form.handleSubmit(async (payload) => {
+    try {
+      const batchId = await createProductionBatchAction({
+        productId: payload.productId,
+        quantityMade: payload.quantityMade,
+        date: payload.date,
+        notes: payload.notes,
       });
+
+      setLastBatchId(batchId);
+      toast.success("Production batch saved", {
+        description: `${selectedProduct?.name ?? "Product"} stock and material movements were updated.`,
+      });
+      startRefresh(() => {
+        router.refresh();
+      });
+    } catch (error) {
+      toast.error("Production blocked", {
+        description: error instanceof Error ? error.message : "Unknown production error.",
+      });
+    }
   });
 
   return (
@@ -96,7 +100,7 @@ export function ProductionPlanner({ initialState }: { initialState: InventorySta
           </CardDescription>
         </CardHeader>
         <CardContent>
-          <form onSubmit={onSubmit} className="flex flex-col gap-5">
+          <form onSubmit={onSubmit} className="flex flex-col gap-5" aria-busy={form.formState.isSubmitting || isRefreshing}>
             <FieldGroup>
               <Field data-invalid={!!form.formState.errors.productId}>
                 <FieldLabel>Product</FieldLabel>
@@ -138,9 +142,21 @@ export function ProductionPlanner({ initialState }: { initialState: InventorySta
                 <Input id="notes" {...form.register("notes")} />
               </Field>
             </FieldGroup>
-            <Button type="submit" disabled={!defaultProductId || !feasibility?.canProduceRequested || form.formState.isSubmitting}>
-              Create production batch
+            <Button
+              type="submit"
+              disabled={!defaultProductId || !feasibility?.canProduceRequested || form.formState.isSubmitting}
+              aria-busy={form.formState.isSubmitting}
+            >
+              {form.formState.isSubmitting ? (
+                <>
+                  <Loader2 data-icon="inline-start" aria-hidden className="animate-spin" />
+                  Creating batch...
+                </>
+              ) : (
+                "Create production batch"
+              )}
             </Button>
+            <RefreshingIndicator show={isRefreshing} />
             {lastBatchId ? (
               <Badge variant="secondary" className="w-fit">
                 Last demo batch: {lastBatchId.slice(0, 18)}

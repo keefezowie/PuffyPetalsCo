@@ -6,6 +6,7 @@ import Link from "next/link";
 import { DataTable } from "@/components/tables/data-table";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import { QuantityCell, MoneyCell, StatusBadge } from "@/components/ui/data-display";
 import { formatQuantity, formatRupiahDecimal } from "@/lib/formatters";
 
 export interface MaterialRow {
@@ -43,23 +44,27 @@ const columns: ColumnDef<MaterialRow>[] = [
   {
     accessorKey: "stockQuantity",
     header: "Stock",
-    cell: ({ row }) => formatQuantity(row.original.stockQuantity, row.original.usageUnit),
+    cell: ({ row }) => (
+      <QuantityCell value={formatQuantity(row.original.stockQuantity, row.original.usageUnit)} />
+    ),
   },
   {
     accessorKey: "minStock",
     header: "Minimum",
-    cell: ({ row }) => formatQuantity(row.original.minStock, row.original.usageUnit),
+    cell: ({ row }) => (
+      <QuantityCell value={formatQuantity(row.original.minStock, row.original.usageUnit)} muted />
+    ),
   },
   {
     accessorKey: "costPerUsageUnit",
     header: "Unit Cost",
-    cell: ({ row }) => formatRupiahDecimal(row.original.costPerUsageUnit),
+    cell: ({ row }) => <MoneyCell value={formatRupiahDecimal(row.original.costPerUsageUnit)} />,
   },
   {
     accessorKey: "estimationStatus",
     header: "Cost Status",
     cell: ({ row }) => (
-      <Badge variant={row.original.estimationStatus === "manually_verified" ? "default" : "outline"}>
+      <Badge variant={row.original.estimationStatus === "manually_verified" ? "success" : "outline"}>
         {row.original.estimationStatus.replaceAll("_", " ")}
       </Badge>
     ),
@@ -69,9 +74,9 @@ const columns: ColumnDef<MaterialRow>[] = [
     header: "Alert",
     cell: ({ row }) =>
       row.original.stockQuantity <= row.original.minStock ? (
-        <Badge variant="destructive">Low stock</Badge>
+        <StatusBadge tone="danger">Low stock</StatusBadge>
       ) : (
-        <Badge variant="secondary">OK</Badge>
+        <StatusBadge tone="success">OK</StatusBadge>
       ),
   },
   {
@@ -90,6 +95,37 @@ export function MaterialsTable({ data }: { data: MaterialRow[] }) {
       columns={columns}
       data={data}
       searchPlaceholder="Search material, variant, size, or category"
+      emptyTitle="No materials found"
+      emptyDescription="Try a different material name, variant, size, or category."
+      mobileCard={(row) => (
+        <div className="rounded-lg border bg-card p-3">
+          <div className="flex items-start justify-between gap-3">
+            <div>
+              <Link href={`/materials/${row.materialId}`} className="font-medium hover:underline">
+                {row.variantName}
+              </Link>
+              <div className="text-xs text-muted-foreground">{row.materialName}</div>
+            </div>
+            {row.stockQuantity <= row.minStock ? (
+              <StatusBadge tone="danger">Low stock</StatusBadge>
+            ) : (
+              <StatusBadge tone="success">OK</StatusBadge>
+            )}
+          </div>
+          <div className="mt-3 grid grid-cols-2 gap-2 text-sm">
+            <div>
+              <div className="text-xs text-muted-foreground">Stock</div>
+              <div className="numeric font-medium">
+                {formatQuantity(row.stockQuantity, row.usageUnit)}
+              </div>
+            </div>
+            <div>
+              <div className="text-xs text-muted-foreground">Unit cost</div>
+              <div className="numeric font-medium">{formatRupiahDecimal(row.costPerUsageUnit)}</div>
+            </div>
+          </div>
+        </div>
+      )}
     />
   );
 }

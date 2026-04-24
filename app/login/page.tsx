@@ -1,14 +1,11 @@
 import { Flower2 } from "lucide-react";
 import { redirect } from "next/navigation";
 
-import { signInAction } from "@/lib/auth/actions";
 import { hasSupabaseConfig } from "@/lib/supabase/config";
 import { createClient } from "@/lib/supabase/server";
-import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
-import { Button } from "@/components/ui/button";
+import { SignInForm } from "@/components/forms/sign-in-form";
+import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { Field, FieldGroup, FieldLabel } from "@/components/ui/field";
-import { Input } from "@/components/ui/input";
 
 export default async function LoginPage({
   searchParams,
@@ -18,7 +15,7 @@ export default async function LoginPage({
   const params = await searchParams;
   if (!hasSupabaseConfig()) {
     return (
-      <main className="flex min-h-svh items-center justify-center bg-background p-4">
+      <main className="flex min-h-svh items-center justify-center bg-background p-4 surface-warm">
         <Card className="w-full max-w-md">
           <CardHeader>
             <CardTitle>Supabase is not configured</CardTitle>
@@ -42,44 +39,22 @@ export default async function LoginPage({
   }
 
   return (
-    <main className="flex min-h-svh items-center justify-center bg-background p-4">
-      <Card className="w-full max-w-md">
+    <main className="flex min-h-svh items-center justify-center bg-background p-4 surface-warm">
+      <Card className="w-full max-w-md shadow-xl shadow-foreground/10">
         <CardHeader>
-          <div className="mb-2 flex size-10 items-center justify-center rounded-lg bg-primary text-primary-foreground">
+          <div className="mb-2 flex size-11 items-center justify-center rounded-lg bg-primary text-primary-foreground shadow-sm">
             <Flower2 aria-hidden />
           </div>
-          <CardTitle>Sign in</CardTitle>
+          <Badge variant="outline" className="mb-1 w-fit">
+            Private workspace
+          </Badge>
+          <CardTitle>Puffy Petals Co.</CardTitle>
           <CardDescription>
             Access your private inventory, costing, production, and sales data.
           </CardDescription>
         </CardHeader>
         <CardContent>
-          <form action={signInAction} className="flex flex-col gap-5">
-            {params.error ? (
-              <Alert variant="destructive">
-                <AlertTitle>Could not sign in</AlertTitle>
-                <AlertDescription>{params.error}</AlertDescription>
-              </Alert>
-            ) : null}
-            <input type="hidden" name="next" value={params.next ?? "/dashboard"} />
-            <FieldGroup>
-              <Field>
-                <FieldLabel htmlFor="email">Email</FieldLabel>
-                <Input id="email" name="email" type="email" autoComplete="email" required />
-              </Field>
-              <Field>
-                <FieldLabel htmlFor="password">Password</FieldLabel>
-                <Input
-                  id="password"
-                  name="password"
-                  type="password"
-                  autoComplete="current-password"
-                  required
-                />
-              </Field>
-            </FieldGroup>
-            <Button type="submit">Sign in</Button>
-          </form>
+          <SignInForm error={params.error} next={params.next ?? "/dashboard"} />
         </CardContent>
       </Card>
     </main>

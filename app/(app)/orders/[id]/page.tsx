@@ -1,7 +1,8 @@
 import { notFound } from "next/navigation";
+import { BadgePercent, CircleDollarSign, PackageCheck, Wallet } from "lucide-react";
 
 import { OrderFulfillmentButton } from "@/components/forms/order-fulfillment-button";
-import { PageHeader } from "@/components/layout/page-helpers";
+import { KpiCard, PageHeader } from "@/components/layout/page-helpers";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import {
@@ -37,16 +38,17 @@ export default async function OrderDetailPage({
       <PageHeader
         title={order.orderNumber}
         description={`${order.customerName} · ${order.platform} · ${order.status.replaceAll("_", " ")}`}
+        eyebrow="Order detail"
         action={
           <OrderFulfillmentButton orderId={order.id} disabled={order.stockDeducted} />
         }
       />
 
       <section className="grid gap-4 md:grid-cols-4">
-        <Metric title="Net revenue" value={formatRupiah(profit.netRevenue)} />
-        <Metric title="COGS" value={formatRupiah(profit.cogs)} />
-        <Metric title="Net profit" value={formatRupiah(profit.netProfit)} />
-        <Metric title="Margin" value={formatPercent(profit.margin)} />
+        <KpiCard title="Net revenue" value={formatRupiah(profit.netRevenue)} icon={CircleDollarSign} tone="success" />
+        <KpiCard title="COGS" value={formatRupiah(profit.cogs)} icon={PackageCheck} tone="info" />
+        <KpiCard title="Net profit" value={formatRupiah(profit.netProfit)} icon={Wallet} tone={profit.netProfit < 0 ? "danger" : "success"} />
+        <KpiCard title="Margin" value={formatPercent(profit.margin)} icon={BadgePercent} tone={profit.margin < 0 ? "danger" : "success"} />
       </section>
 
       <Card>
@@ -94,14 +96,5 @@ export default async function OrderDetailPage({
         </CardContent>
       </Card>
     </>
-  );
-}
-
-function Metric({ title, value }: { title: string; value: string }) {
-  return (
-    <div className="rounded-lg border bg-card p-4">
-      <div className="text-sm text-muted-foreground">{title}</div>
-      <div className="mt-1 text-xl font-semibold">{value}</div>
-    </div>
   );
 }

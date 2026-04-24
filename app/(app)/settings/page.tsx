@@ -1,6 +1,6 @@
 import { PageHeader } from "@/components/layout/page-helpers";
-import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { MoneyCell, StatusBadge } from "@/components/ui/data-display";
 import { Field, FieldDescription, FieldGroup, FieldLabel } from "@/components/ui/field";
 import { Input } from "@/components/ui/input";
 import { Switch } from "@/components/ui/switch";
@@ -24,6 +24,7 @@ export default async function SettingsPage() {
       <PageHeader
         title="Settings"
         description="Single-user operating assumptions for costing, stock control, and platform fees."
+        eyebrow="Admin"
       />
 
       <section className="grid gap-4 xl:grid-cols-[0.8fr_1.2fr]">
@@ -77,11 +78,11 @@ export default async function SettingsPage() {
                   <TableRow key={rule.id}>
                     <TableCell className="font-medium">{rule.platform}</TableCell>
                     <TableCell>{formatPercent(rule.feeRate)}</TableCell>
-                    <TableCell>{formatRupiah(rule.fixedFee)}</TableCell>
+                    <TableCell><MoneyCell value={formatRupiah(rule.fixedFee)} /></TableCell>
                     <TableCell>
-                      <Badge variant={rule.active ? "secondary" : "outline"}>
+                      <StatusBadge tone={rule.active ? "success" : "info"}>
                         {rule.active ? "Active" : "Inactive"}
-                      </Badge>
+                      </StatusBadge>
                     </TableCell>
                   </TableRow>
                 ))}

@@ -4,7 +4,7 @@ import type { ColumnDef } from "@tanstack/react-table";
 import Link from "next/link";
 
 import { DataTable } from "@/components/tables/data-table";
-import { Badge } from "@/components/ui/badge";
+import { MoneyCell, QuantityCell, StatusBadge } from "@/components/ui/data-display";
 import { formatPercent, formatQuantity, formatRupiah } from "@/lib/formatters";
 
 export interface ProductRow {
@@ -36,41 +36,44 @@ const columns: ColumnDef<ProductRow>[] = [
   {
     accessorKey: "sellingPrice",
     header: "Selling Price",
-    cell: ({ row }) => formatRupiah(row.original.sellingPrice),
+    cell: ({ row }) => <MoneyCell value={formatRupiah(row.original.sellingPrice)} />,
   },
   {
     accessorKey: "manufacturingCost",
     header: "Cost",
-    cell: ({ row }) => formatRupiah(row.original.manufacturingCost),
+    cell: ({ row }) => <MoneyCell value={formatRupiah(row.original.manufacturingCost)} muted />,
   },
   {
     accessorKey: "grossMargin",
     header: "Margin",
     cell: ({ row }) => (
-      <Badge
-        variant={
+      <StatusBadge
+        tone={
           row.original.grossMargin < row.original.targetMargin
-            ? "destructive"
-            : "secondary"
+            ? "danger"
+            : "success"
         }
       >
         {formatPercent(row.original.grossMargin)}
-      </Badge>
+      </StatusBadge>
     ),
   },
   {
     accessorKey: "recommendedPrice",
     header: "Recommended",
-    cell: ({ row }) => formatRupiah(row.original.recommendedPrice),
+    cell: ({ row }) => <MoneyCell value={formatRupiah(row.original.recommendedPrice)} />,
   },
   {
     accessorKey: "currentStock",
     header: "Stock",
-    cell: ({ row }) =>
-      `${formatQuantity(row.original.currentStock, "pcs")} (${formatQuantity(
-        row.original.currentStock - row.original.reservedStock,
-        "available",
-      )})`,
+    cell: ({ row }) => (
+      <QuantityCell
+        value={`${formatQuantity(row.original.currentStock, "pcs")} (${formatQuantity(
+          row.original.currentStock - row.original.reservedStock,
+          "available",
+        )})`}
+      />
+    ),
   },
 ];
 
@@ -80,6 +83,35 @@ export function ProductsTable({ data }: { data: ProductRow[] }) {
       columns={columns}
       data={data}
       searchPlaceholder="Search products, SKU, or margin"
+      emptyTitle="No products found"
+      emptyDescription="Try another product name, SKU, or margin search."
+      mobileCard={(row) => (
+        <div className="rounded-lg border bg-card p-3">
+          <div className="flex items-start justify-between gap-3">
+            <div>
+              <Link href={`/products/${row.id}`} className="font-medium hover:underline">
+                {row.name}
+              </Link>
+              <div className="text-xs text-muted-foreground">{row.sku}</div>
+            </div>
+            <StatusBadge tone={row.grossMargin < row.targetMargin ? "danger" : "success"}>
+              {formatPercent(row.grossMargin)}
+            </StatusBadge>
+          </div>
+          <div className="mt-3 grid grid-cols-2 gap-2 text-sm">
+            <div>
+              <div className="text-xs text-muted-foreground">Price</div>
+              <div className="numeric font-medium">{formatRupiah(row.sellingPrice)}</div>
+            </div>
+            <div>
+              <div className="text-xs text-muted-foreground">Available</div>
+              <div className="numeric font-medium">
+                {formatQuantity(row.currentStock - row.reservedStock, "pcs")}
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
     />
   );
 }

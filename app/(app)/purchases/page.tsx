@@ -1,6 +1,8 @@
 import { PurchaseEntryForm } from "@/components/forms/purchase-entry-form";
 import { PageHeader } from "@/components/layout/page-helpers";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { MoneyCell } from "@/components/ui/data-display";
+import { EmptyState } from "@/components/ui/state-views";
 import {
   Table,
   TableBody,
@@ -20,6 +22,7 @@ export default async function PurchasesPage() {
       <PageHeader
         title="Purchases"
         description="Record material purchases, update stock, and write immutable purchase movements."
+        eyebrow="Stock intake"
       />
 
       <section className="grid gap-4 xl:grid-cols-[0.85fr_1.15fr]">
@@ -41,17 +44,26 @@ export default async function PurchasesPage() {
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {state.purchases.map((purchase) => {
+                {state.purchases.length ? state.purchases.map((purchase) => {
                   const supplier = state.suppliers.find((item) => item.id === purchase.supplierId);
                   return (
                     <TableRow key={purchase.id}>
                       <TableCell>{formatDate(purchase.date)}</TableCell>
                       <TableCell>{supplier?.name}</TableCell>
-                      <TableCell>{formatRupiah(purchase.effectiveTotal)}</TableCell>
+                      <TableCell><MoneyCell value={formatRupiah(purchase.effectiveTotal)} /></TableCell>
                       <TableCell>{purchase.notes}</TableCell>
                     </TableRow>
                   );
-                })}
+                }) : (
+                  <TableRow>
+                    <TableCell colSpan={4} className="h-40">
+                      <EmptyState
+                        title="No purchases recorded"
+                        description="Saved purchases will appear here with supplier and cost details."
+                      />
+                    </TableCell>
+                  </TableRow>
+                )}
               </TableBody>
             </Table>
           </CardContent>

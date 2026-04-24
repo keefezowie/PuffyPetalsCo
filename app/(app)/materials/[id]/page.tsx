@@ -1,6 +1,7 @@
 import { notFound } from "next/navigation";
+import { ArrowRightLeft, Boxes, Ruler } from "lucide-react";
 
-import { PageHeader } from "@/components/layout/page-helpers";
+import { KpiCard, PageHeader } from "@/components/layout/page-helpers";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import {
@@ -37,14 +38,17 @@ export default async function MaterialDetailPage({
       <PageHeader
         title={material.name}
         description={material.notes ?? "Material detail, variant cost, stock, and supplier price history."}
+        eyebrow="Material detail"
       />
 
       <section className="grid gap-4 lg:grid-cols-3">
-        <Metric title="Purchase unit" value={material.purchaseUnit} />
-        <Metric title="Usage unit" value={material.usageUnit} />
-        <Metric
+        <KpiCard title="Purchase unit" value={material.purchaseUnit} icon={Boxes} tone="info" />
+        <KpiCard title="Usage unit" value={material.usageUnit} icon={Ruler} tone="success" />
+        <KpiCard
           title="Conversion"
           value={`${material.conversionFactor} ${material.usageUnit} / ${material.purchaseUnit}`}
+          icon={ArrowRightLeft}
+          tone="warning"
         />
       </section>
 
@@ -121,14 +125,5 @@ export default async function MaterialDetailPage({
         </CardContent>
       </Card>
     </>
-  );
-}
-
-function Metric({ title, value }: { title: string; value: string }) {
-  return (
-    <div className="rounded-lg border bg-card p-4">
-      <div className="text-sm text-muted-foreground">{title}</div>
-      <div className="mt-1 text-xl font-semibold">{value}</div>
-    </div>
   );
 }

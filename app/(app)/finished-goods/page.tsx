@@ -1,6 +1,7 @@
 import { PageHeader } from "@/components/layout/page-helpers";
-import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { MoneyCell, QuantityCell, StatusBadge } from "@/components/ui/data-display";
+import { EmptyState } from "@/components/ui/state-views";
 import {
   Table,
   TableBody,
@@ -20,6 +21,7 @@ export default async function FinishedGoodsPage() {
       <PageHeader
         title="Finished Goods"
         description="Product stock, reservations, available stock, and inventory value."
+        eyebrow="Inventory control"
       />
       <Card>
         <CardHeader>
@@ -40,24 +42,33 @@ export default async function FinishedGoodsPage() {
               </TableRow>
             </TableHeader>
             <TableBody>
-              {state.products.map((product) => {
+              {state.products.length ? state.products.map((product) => {
                 const available = product.currentStock - product.reservedStock;
                 return (
                   <TableRow key={product.id}>
                     <TableCell className="font-medium">{product.name}</TableCell>
-                    <TableCell>{formatQuantity(product.currentStock, "pcs")}</TableCell>
-                    <TableCell>{formatQuantity(product.reservedStock, "pcs")}</TableCell>
+                    <TableCell><QuantityCell value={formatQuantity(product.currentStock, "pcs")} /></TableCell>
+                    <TableCell><QuantityCell value={formatQuantity(product.reservedStock, "pcs")} muted /></TableCell>
                     <TableCell>
-                      <Badge variant={available <= 0 ? "destructive" : "secondary"}>
+                      <StatusBadge tone={available <= 0 ? "danger" : "success"}>
                         {formatQuantity(available, "pcs")}
-                      </Badge>
+                      </StatusBadge>
                     </TableCell>
-                    <TableCell>{formatRupiahDecimal(product.averageUnitManufacturingCost)}</TableCell>
-                    <TableCell>{formatRupiahDecimal(product.lastProductionCost)}</TableCell>
-                    <TableCell>{formatRupiah(product.currentStock * product.averageUnitManufacturingCost)}</TableCell>
+                    <TableCell><MoneyCell value={formatRupiahDecimal(product.averageUnitManufacturingCost)} muted /></TableCell>
+                    <TableCell><MoneyCell value={formatRupiahDecimal(product.lastProductionCost)} muted /></TableCell>
+                    <TableCell><MoneyCell value={formatRupiah(product.currentStock * product.averageUnitManufacturingCost)} /></TableCell>
                   </TableRow>
                 );
-              })}
+              }) : (
+                <TableRow>
+                  <TableCell colSpan={7} className="h-40">
+                    <EmptyState
+                      title="No finished goods"
+                      description="Production batches will create finished goods stock."
+                    />
+                  </TableCell>
+                </TableRow>
+              )}
             </TableBody>
           </Table>
         </CardContent>

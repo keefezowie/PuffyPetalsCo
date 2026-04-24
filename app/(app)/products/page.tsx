@@ -32,6 +32,7 @@ export default async function ProductsPage() {
       <PageHeader
         title="Products"
         description="Finished goods, live manufacturing cost, margin, and recommended price."
+        eyebrow="Catalog costing"
       />
       <Card>
         <CardHeader>

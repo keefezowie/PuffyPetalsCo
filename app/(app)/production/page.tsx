@@ -1,6 +1,8 @@
 import { PageHeader } from "@/components/layout/page-helpers";
 import { ProductionPlanner } from "@/components/forms/production-planner";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { MoneyCell, QuantityCell } from "@/components/ui/data-display";
+import { EmptyState } from "@/components/ui/state-views";
 import {
   Table,
   TableBody,
@@ -20,6 +22,7 @@ export default async function ProductionPage() {
       <PageHeader
         title="Production"
         description="Check shortages before saving a batch. Negative stock is blocked by default."
+        eyebrow="Batch workflow"
       />
       <ProductionPlanner initialState={state} />
 
@@ -40,18 +43,27 @@ export default async function ProductionPage() {
               </TableRow>
             </TableHeader>
             <TableBody>
-              {state.productionBatches.map((batch) => {
+              {state.productionBatches.length ? state.productionBatches.map((batch) => {
                 const product = state.products.find((item) => item.id === batch.productId);
                 return (
                   <TableRow key={batch.id}>
                     <TableCell>{formatDate(batch.date)}</TableCell>
                     <TableCell>{product?.name}</TableCell>
-                    <TableCell>{formatQuantity(batch.quantityMade, "pcs")}</TableCell>
-                    <TableCell>{formatRupiah(product?.lastProductionCost ?? 0)}</TableCell>
-                    <TableCell>{formatRupiah((product?.lastProductionCost ?? 0) * batch.quantityMade)}</TableCell>
+                    <TableCell><QuantityCell value={formatQuantity(batch.quantityMade, "pcs")} /></TableCell>
+                    <TableCell><MoneyCell value={formatRupiah(product?.lastProductionCost ?? 0)} muted /></TableCell>
+                    <TableCell><MoneyCell value={formatRupiah((product?.lastProductionCost ?? 0) * batch.quantityMade)} /></TableCell>
                   </TableRow>
                 );
-              })}
+              }) : (
+                <TableRow>
+                  <TableCell colSpan={5} className="h-40">
+                    <EmptyState
+                      title="No production batches"
+                      description="Create a batch above to consume materials and increase finished goods stock."
+                    />
+                  </TableCell>
+                </TableRow>
+              )}
             </TableBody>
           </Table>
         </CardContent>

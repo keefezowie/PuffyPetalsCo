@@ -31,6 +31,7 @@ export default async function MaterialsPage() {
       <PageHeader
         title="Materials"
         description="Raw material families and variants, including pearl sizes stored as variants instead of unrelated materials."
+        eyebrow="Raw inventory"
         action={
           <Button variant="outline">
             <SlidersHorizontal data-icon="inline-start" aria-hidden />

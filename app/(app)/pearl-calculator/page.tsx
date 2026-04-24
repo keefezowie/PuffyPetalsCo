@@ -7,6 +7,7 @@ export default function PearlCalculatorPage() {
       <PageHeader
         title="Pearl Calculator"
         description="Estimate pieces per 15g pack from the corrected 10mm = 33 pcs baseline, then calculate cost per pearl."
+        eyebrow="Costing tool"
       />
       <PearlCalculatorForm />
     </>
