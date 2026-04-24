@@ -38,18 +38,12 @@ export default async function DashboardPage() {
       };
     })
     .sort((a, b) => a.margin - b.margin);
-  const salesData = [
-    { month: "Jan", revenue: 125000, profit: 46000 },
-    { month: "Feb", revenue: 180000, profit: 72000 },
-    { month: "Mar", revenue: 215000, profit: 92000 },
-    { month: "Apr", revenue: metrics.monthlyRevenue, profit: metrics.monthlyNetProfit },
-  ];
-  const platformData = state.platformFeeRules.map((rule) => ({
-    platform: rule.platform,
-    value: state.orders
-      .filter((order) => order.platform === rule.platform)
-      .reduce((sum, order) => sum + order.netRevenue, 0),
-  }));
+  const salesData = getSalesProfitByMonth(state);
+  const platformData = getRevenueByPlatform(state);
+  const pendingFulfillment = state.orders.filter(
+    (order) => !["fulfilled", "returned"].includes(order.fulfillmentStatus),
+  ).length;
+  const lowestMarginProduct = productMargins[0];
 
   return (
     <>
@@ -85,7 +79,7 @@ export default async function DashboardPage() {
         <KpiCard
           title="Monthly revenue"
           value={formatRupiah(metrics.monthlyRevenue)}
-          detail="Based on sample orders in the current month"
+          detail="Based on database orders in the current month"
           icon={CircleDollarSign}
           tone="success"
         />
@@ -105,7 +99,14 @@ export default async function DashboardPage() {
             <CardDescription>Revenue and net profit trend for planning.</CardDescription>
           </CardHeader>
           <CardContent>
-            <SalesProfitChart data={salesData} />
+            {salesData.length ? (
+              <SalesProfitChart data={salesData} />
+            ) : (
+              <EmptyState
+                title="No sales trend yet"
+                description="Order entries will populate this chart from the database."
+              />
+            )}
           </CardContent>
         </Card>
         <Card>
@@ -114,7 +115,14 @@ export default async function DashboardPage() {
             <CardDescription>Channel mix for platform fee decisions.</CardDescription>
           </CardHeader>
           <CardContent>
-            <PlatformRevenueChart data={platformData} />
+            {platformData.length ? (
+              <PlatformRevenueChart data={platformData} />
+            ) : (
+              <EmptyState
+                title="No platform revenue yet"
+                description="Saved orders will populate platform revenue."
+              />
+            )}
           </CardContent>
         </Card>
       </section>
@@ -228,26 +236,77 @@ export default async function DashboardPage() {
           <div className="flex items-start gap-3 rounded-lg border bg-amber-500/5 p-3">
             <AlertTriangle aria-hidden className="text-amber-600" />
             <div>
-              <div className="font-medium">Limiting material</div>
-              <div className="text-sm text-muted-foreground">12mm pearls are below the target stock.</div>
+              <div className="font-medium">
+                {lowStock[0] ? "Limiting material" : "Material stock healthy"}
+              </div>
+              <div className="text-sm text-muted-foreground">
+                {lowStock[0]
+                  ? `${lowStock[0].variant.name} is at ${formatQuantity(lowStock[0].variant.stockQuantity, lowStock[0].variant.usageUnit)}.`
+                  : "No tracked material variants are below their minimum stock."}
+              </div>
             </div>
           </div>
           <div className="flex items-start gap-3 rounded-lg border bg-primary/5 p-3">
             <ShoppingBag aria-hidden className="text-primary" />
             <div>
               <div className="font-medium">Pending fulfillment</div>
-              <div className="text-sm text-muted-foreground">Confirmed orders are reserving finished goods.</div>
+              <div className="text-sm text-muted-foreground">
+                {pendingFulfillment
+                  ? `${pendingFulfillment} order${pendingFulfillment === 1 ? "" : "s"} still need fulfillment.`
+                  : "All saved orders are fulfilled, returned, or closed."}
+              </div>
             </div>
           </div>
           <div className="flex items-start gap-3 rounded-lg border bg-emerald-500/5 p-3">
             <CircleDollarSign aria-hidden className="text-emerald-600" />
             <div>
               <div className="font-medium">Margin review</div>
-              <div className="text-sm text-muted-foreground">Recommended prices include target margin and platform fees.</div>
+              <div className="text-sm text-muted-foreground">
+                {lowestMarginProduct
+                  ? `${lowestMarginProduct.product.name} has the lowest current margin at ${formatPercent(lowestMarginProduct.margin)}.`
+                  : "Create products and BOMs to calculate margin alerts."}
+              </div>
             </div>
           </div>
         </CardContent>
       </Card>
     </>
   );
+}
+
+function getSalesProfitByMonth(state: Awaited<ReturnType<typeof getInventoryState>>) {
+  const rows = new Map<string, { month: string; revenue: number; profit: number }>();
+
+  for (const order of state.orders) {
+    const date = new Date(order.orderDate);
+    const key = `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, "0")}`;
+    const existing =
+      rows.get(key) ??
+      {
+        month: date.toLocaleString("en", { month: "short", year: "2-digit" }),
+        revenue: 0,
+        profit: 0,
+      };
+    const profit = calculateOrderProfit(state, order.id);
+    existing.revenue += profit.netRevenue;
+    existing.profit += profit.netProfit;
+    rows.set(key, existing);
+  }
+
+  return [...rows.entries()]
+    .sort(([a], [b]) => a.localeCompare(b))
+    .map(([, row]) => row);
+}
+
+function getRevenueByPlatform(state: Awaited<ReturnType<typeof getInventoryState>>) {
+  const rows = new Map<string, number>();
+
+  for (const order of state.orders) {
+    const profit = calculateOrderProfit(state, order.id);
+    rows.set(order.platform, (rows.get(order.platform) ?? 0) + profit.netRevenue);
+  }
+
+  return [...rows.entries()]
+    .sort((a, b) => b[1] - a[1])
+    .map(([platform, value]) => ({ platform, value }));
 }

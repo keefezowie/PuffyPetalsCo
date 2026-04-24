@@ -1,5 +1,6 @@
 import Link from "next/link";
 
+import { OrderCreateForm } from "@/components/forms/master-data-forms";
 import { PageHeader } from "@/components/layout/page-helpers";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { MoneyCell, StatusBadge } from "@/components/ui/data-display";
@@ -26,61 +27,64 @@ export default async function OrdersPage() {
         description="Track platform orders, status, revenue, COGS, and profit without double-deducting stock."
         eyebrow="Sales operations"
       />
-      <Card>
-        <CardHeader>
-          <CardTitle>Sales Orders</CardTitle>
-          <CardDescription>Status transitions control reservation and fulfillment behavior.</CardDescription>
-        </CardHeader>
-        <CardContent>
-          <Table>
-            <TableHeader>
-              <TableRow>
-                <TableHead>Order</TableHead>
-                <TableHead>Date</TableHead>
-                <TableHead>Platform</TableHead>
-                <TableHead>Status</TableHead>
-                <TableHead>Net Revenue</TableHead>
-                <TableHead>Net Profit</TableHead>
-                <TableHead>Margin</TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {state.orders.length ? state.orders.map((order) => {
-                const profit = calculateOrderProfit(state, order.id);
-                return (
-                  <TableRow key={order.id}>
-                    <TableCell>
-                      <Link href={`/orders/${order.id}`} className="font-medium hover:underline">
-                        {order.orderNumber}
-                      </Link>
-                      <div className="text-xs text-muted-foreground">{order.customerName}</div>
-                    </TableCell>
-                    <TableCell>{formatDate(order.orderDate)}</TableCell>
-                    <TableCell>{order.platform}</TableCell>
-                    <TableCell>
-                      <StatusBadge tone={order.stockDeducted ? "success" : "warning"}>
-                        {order.status.replaceAll("_", " ")}
-                      </StatusBadge>
-                    </TableCell>
-                    <TableCell><MoneyCell value={formatRupiah(profit.netRevenue)} /></TableCell>
-                    <TableCell><MoneyCell value={formatRupiah(profit.netProfit)} /></TableCell>
-                    <TableCell>{formatPercent(profit.margin)}</TableCell>
-                  </TableRow>
-                );
-              }) : (
+      <section className="grid gap-4 xl:grid-cols-[0.85fr_1.15fr]">
+        <OrderCreateForm state={state} />
+        <Card>
+          <CardHeader>
+            <CardTitle>Sales Orders</CardTitle>
+            <CardDescription>Status transitions control reservation and fulfillment behavior.</CardDescription>
+          </CardHeader>
+          <CardContent>
+            <Table>
+              <TableHeader>
                 <TableRow>
-                  <TableCell colSpan={7} className="h-40">
-                    <EmptyState
-                      title="No orders recorded"
-                      description="Orders will appear here once sales are imported or entered."
-                    />
-                  </TableCell>
+                  <TableHead>Order</TableHead>
+                  <TableHead>Date</TableHead>
+                  <TableHead>Platform</TableHead>
+                  <TableHead>Status</TableHead>
+                  <TableHead>Net Revenue</TableHead>
+                  <TableHead>Net Profit</TableHead>
+                  <TableHead>Margin</TableHead>
                 </TableRow>
-              )}
-            </TableBody>
-          </Table>
-        </CardContent>
-      </Card>
+              </TableHeader>
+              <TableBody>
+                {state.orders.length ? state.orders.map((order) => {
+                  const profit = calculateOrderProfit(state, order.id);
+                  return (
+                    <TableRow key={order.id}>
+                      <TableCell>
+                        <Link href={`/orders/${order.id}`} className="font-medium hover:underline">
+                          {order.orderNumber}
+                        </Link>
+                        <div className="text-xs text-muted-foreground">{order.customerName}</div>
+                      </TableCell>
+                      <TableCell>{formatDate(order.orderDate)}</TableCell>
+                      <TableCell>{order.platform}</TableCell>
+                      <TableCell>
+                        <StatusBadge tone={order.stockDeducted ? "success" : "warning"}>
+                          {order.status.replaceAll("_", " ")}
+                        </StatusBadge>
+                      </TableCell>
+                      <TableCell><MoneyCell value={formatRupiah(profit.netRevenue)} /></TableCell>
+                      <TableCell><MoneyCell value={formatRupiah(profit.netProfit)} /></TableCell>
+                      <TableCell>{formatPercent(profit.margin)}</TableCell>
+                    </TableRow>
+                  );
+                }) : (
+                  <TableRow>
+                    <TableCell colSpan={7} className="h-40">
+                      <EmptyState
+                        title="No orders recorded"
+                        description="Create orders with the form beside this table."
+                      />
+                    </TableCell>
+                  </TableRow>
+                )}
+              </TableBody>
+            </Table>
+          </CardContent>
+        </Card>
+      </section>
     </>
   );
 }

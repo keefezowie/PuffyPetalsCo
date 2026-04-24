@@ -1,3 +1,4 @@
+import { SupplierCreateForm } from "@/components/forms/master-data-forms";
 import { PageHeader } from "@/components/layout/page-helpers";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { MoneyCell, StatusBadge } from "@/components/ui/data-display";
@@ -23,13 +24,15 @@ export default async function SuppliersPage() {
         description="Supplier records and price history for purchase decisions."
         eyebrow="Sourcing"
       />
-      <Card>
-        <CardHeader>
-          <CardTitle>Supplier Directory</CardTitle>
-          <CardDescription>Preferred suppliers are used in restock reports.</CardDescription>
-        </CardHeader>
-        <CardContent>
-          <Table>
+      <section className="grid gap-4 xl:grid-cols-[0.85fr_1.15fr]">
+        <SupplierCreateForm />
+        <Card>
+          <CardHeader>
+            <CardTitle>Supplier Directory</CardTitle>
+            <CardDescription>Preferred suppliers are used in restock reports.</CardDescription>
+          </CardHeader>
+          <CardContent>
+            <Table>
             <TableHeader>
               <TableRow>
                 <TableHead>Name</TableHead>
@@ -58,9 +61,10 @@ export default async function SuppliersPage() {
                 </TableRow>
               )}
             </TableBody>
-          </Table>
-        </CardContent>
-      </Card>
+            </Table>
+          </CardContent>
+        </Card>
+      </section>
 
       <Card>
         <CardHeader>

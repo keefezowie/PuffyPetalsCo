@@ -1,3 +1,4 @@
+import { ProductCreateForm } from "@/components/forms/master-data-forms";
 import { PageHeader } from "@/components/layout/page-helpers";
 import { ProductsTable, type ProductRow } from "@/components/tables/products-table";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -34,17 +35,20 @@ export default async function ProductsPage() {
         description="Finished goods, live manufacturing cost, margin, and recommended price."
         eyebrow="Catalog costing"
       />
-      <Card>
-        <CardHeader>
-          <CardTitle>Flower Products</CardTitle>
-          <CardDescription>
-            Current product BOMs all use 12mm pearls, while the material model supports future sizes.
-          </CardDescription>
-        </CardHeader>
-        <CardContent>
-          <ProductsTable data={rows} />
-        </CardContent>
-      </Card>
+      <section className="grid gap-4 xl:grid-cols-[0.9fr_1.1fr]">
+        <ProductCreateForm state={state} />
+        <Card>
+          <CardHeader>
+            <CardTitle>Flower Products</CardTitle>
+            <CardDescription>
+              Product rows are created in Supabase and costed from their live BOM lines.
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            <ProductsTable data={rows} />
+          </CardContent>
+        </Card>
+      </section>
     </>
   );
 }

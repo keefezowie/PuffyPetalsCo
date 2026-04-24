@@ -90,15 +90,15 @@ export function ProductionPlanner({ initialState }: { initialState: InventorySta
   return (
     <div className="grid gap-4 xl:grid-cols-[0.85fr_1.15fr]">
       <Card>
-        <CardHeader>
-          <CardTitle className="flex items-center gap-2">
-            <Factory aria-hidden />
-            Production Batch
-          </CardTitle>
-          <CardDescription>
-            Demo mode uses the same service logic as the tested inventory core.
-          </CardDescription>
-        </CardHeader>
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <Factory aria-hidden />
+              Production Batch
+            </CardTitle>
+            <CardDescription>
+              Saves a production batch through the database transaction.
+            </CardDescription>
+          </CardHeader>
         <CardContent>
           <form onSubmit={onSubmit} className="flex flex-col gap-5" aria-busy={form.formState.isSubmitting || isRefreshing}>
             <FieldGroup>
@@ -159,7 +159,7 @@ export function ProductionPlanner({ initialState }: { initialState: InventorySta
             <RefreshingIndicator show={isRefreshing} />
             {lastBatchId ? (
               <Badge variant="secondary" className="w-fit">
-                Last demo batch: {lastBatchId.slice(0, 18)}
+                Last batch: {lastBatchId.slice(0, 18)}
               </Badge>
             ) : null}
           </form>

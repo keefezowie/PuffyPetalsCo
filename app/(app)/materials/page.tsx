@@ -1,5 +1,6 @@
 import { SlidersHorizontal } from "lucide-react";
 
+import { MaterialCreateForm } from "@/components/forms/master-data-forms";
 import { StockAdjustmentForm } from "@/components/forms/stock-adjustment-form";
 import { PageHeader } from "@/components/layout/page-helpers";
 import { MaterialsTable, type MaterialRow } from "@/components/tables/materials-table";
@@ -39,17 +40,20 @@ export default async function MaterialsPage() {
           </Button>
         }
       />
-      <Card>
-        <CardHeader>
-          <CardTitle>Raw Material Stock</CardTitle>
-          <CardDescription>
-            Search, sort, and review stock thresholds before purchasing or production.
-          </CardDescription>
-        </CardHeader>
-        <CardContent>
-          <MaterialsTable data={rows} />
-        </CardContent>
-      </Card>
+      <section className="grid gap-4 xl:grid-cols-[0.9fr_1.1fr]">
+        <MaterialCreateForm state={state} />
+        <Card>
+          <CardHeader>
+            <CardTitle>Raw Material Stock</CardTitle>
+            <CardDescription>
+              Search, sort, and review stock thresholds before purchasing or production.
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            <MaterialsTable data={rows} />
+          </CardContent>
+        </Card>
+      </section>
       <StockAdjustmentForm state={state} />
     </>
   );

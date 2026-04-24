@@ -128,7 +128,7 @@ export function AppShell({
             </div>
             {signOut ? (
               <form action={signOut}>
-                <Button variant="outline" size="sm" className="w-full justify-start">
+                <Button type="submit" variant="outline" size="sm" className="w-full justify-start">
                   <LogOut data-icon="inline-start" aria-hidden />
                   Sign out
                 </Button>
@@ -172,6 +172,20 @@ export function AppShell({
                       </div>
                     ))}
                   </nav>
+                  {signOut ? (
+                    <div className="border-t p-4">
+                      <div className="mb-3">
+                        <div className="text-xs font-medium text-muted-foreground">Signed in as</div>
+                        <div className="truncate text-sm">{userEmail ?? "Authenticated user"}</div>
+                      </div>
+                      <form action={signOut}>
+                        <Button type="submit" variant="outline" size="sm" className="w-full justify-start">
+                          <LogOut data-icon="inline-start" aria-hidden />
+                          Sign out
+                        </Button>
+                      </form>
+                    </div>
+                  ) : null}
                 </div>
               </SheetContent>
             </Sheet>
@@ -198,6 +212,13 @@ export function AppShell({
           <Badge variant="outline" className="hidden sm:inline-flex">
             Asia/Jakarta
           </Badge>
+          {signOut ? (
+            <form action={signOut} className="lg:hidden">
+              <Button type="submit" variant="ghost" size="icon-sm" aria-label="Sign out">
+                <LogOut aria-hidden />
+              </Button>
+            </form>
+          ) : null}
         </header>
         <main className="mx-auto flex w-full max-w-7xl flex-col gap-6 p-4 pb-20 md:p-6 lg:pb-6">
           {children}

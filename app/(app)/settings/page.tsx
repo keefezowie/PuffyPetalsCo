@@ -1,9 +1,7 @@
+import { SettingsUpdateForm } from "@/components/forms/master-data-forms";
 import { PageHeader } from "@/components/layout/page-helpers";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { MoneyCell, StatusBadge } from "@/components/ui/data-display";
-import { Field, FieldDescription, FieldGroup, FieldLabel } from "@/components/ui/field";
-import { Input } from "@/components/ui/input";
-import { Switch } from "@/components/ui/switch";
 import {
   Table,
   TableBody,
@@ -17,7 +15,6 @@ import { formatPercent, formatRupiah } from "@/lib/formatters";
 
 export default async function SettingsPage() {
   const state = await getInventoryState();
-  const settings = state.settings;
 
   return (
     <>
@@ -28,35 +25,7 @@ export default async function SettingsPage() {
       />
 
       <section className="grid gap-4 xl:grid-cols-[0.8fr_1.2fr]">
-        <Card>
-          <CardHeader>
-            <CardTitle>Inventory Rules</CardTitle>
-            <CardDescription>Negative stock is blocked by default for reliable costing.</CardDescription>
-          </CardHeader>
-          <CardContent>
-            <FieldGroup>
-              <Field orientation="horizontal">
-                <Switch checked={settings.allowNegativeStock} disabled />
-                <div>
-                  <FieldLabel>Allow negative stock</FieldLabel>
-                  <FieldDescription>Disabled for MVP unless explicitly changed in Supabase settings.</FieldDescription>
-                </div>
-              </Field>
-              <Field>
-                <FieldLabel>Costing method</FieldLabel>
-                <Input value={settings.costingMethod.replaceAll("_", " ")} readOnly />
-              </Field>
-              <Field>
-                <FieldLabel>Default target margin</FieldLabel>
-                <Input value={formatPercent(settings.targetMargin)} readOnly />
-              </Field>
-              <Field>
-                <FieldLabel>Labor rate per hour</FieldLabel>
-                <Input value={formatRupiah(settings.laborRatePerHour)} readOnly />
-              </Field>
-            </FieldGroup>
-          </CardContent>
-        </Card>
+        <SettingsUpdateForm state={state} />
 
         <Card>
           <CardHeader>
