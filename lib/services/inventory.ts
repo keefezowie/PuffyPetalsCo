@@ -134,7 +134,7 @@ export function calculateBomLineCosts(
       return {
         bomLineId: line.id,
         materialVariantId: variant.id,
-        materialName: material ? `${material.name} ${variant.name}` : variant.name,
+        materialName: formatMaterialVariantName(material?.name, variant.name),
         quantityRequired: line.quantityRequired,
         wastePercentage: line.wastePercentage,
         effectiveQuantity,
@@ -144,6 +144,25 @@ export function calculateBomLineCosts(
         optional: line.optional,
       };
     });
+}
+
+function formatMaterialVariantName(materialName: string | undefined, variantName: string) {
+  if (!materialName) {
+    return variantName;
+  }
+
+  const normalizedMaterial = materialName.trim().toLocaleLowerCase();
+  const normalizedVariant = variantName.trim().toLocaleLowerCase();
+
+  if (
+    normalizedMaterial === normalizedVariant ||
+    normalizedVariant.startsWith(`${normalizedMaterial} `) ||
+    normalizedVariant.endsWith(` ${normalizedMaterial}`)
+  ) {
+    return variantName;
+  }
+
+  return `${materialName} ${variantName}`;
 }
 
 export function calculateProductManufacturingCost(
