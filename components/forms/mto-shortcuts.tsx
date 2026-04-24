@@ -1,10 +1,11 @@
 "use client";
 
-import { Factory, Loader2, PackageSearch, PlayCircle } from "lucide-react";
+import { Factory, Loader2, PackageCheck, PackageSearch, PlayCircle } from "lucide-react";
 import { useMemo, useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
 
+import { EntitySelect } from "@/components/forms/entity-select";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Dialog, DialogContent, DialogTrigger } from "@/components/ui/dialog";
@@ -29,6 +30,7 @@ import {
   completeProductionBatchAction,
   createPurchaseListFromBatchAction,
   planProductionFromOrderAction,
+  recordPurchaseAction,
 } from "@/lib/services/supabase-inventory";
 import type { InventoryState, ProductionPlanMode } from "@/lib/types";
 
@@ -320,6 +322,229 @@ export function PurchaseListFromBatchButton({
           </div>
           <RefreshingIndicator show={isRefreshing} />
         </div>
+      </DialogContent>
+    </Dialog>
+  );
+}
+
+function asNumber(formData: FormData, name: string, fallback = 0) {
+  const value = Number(formData.get(name) ?? fallback);
+  return Number.isFinite(value) ? value : fallback;
+}
+
+function asString(formData: FormData, name: string, fallback = "") {
+  return String(formData.get(name) ?? fallback);
+}
+
+export function ReceivePurchaseListButton({
+  state,
+  purchaseListId,
+  disabled,
+}: {
+  state: InventoryState;
+  purchaseListId: string;
+  disabled?: boolean;
+}) {
+  const router = useRouter();
+  const [isRefreshing, startRefresh] = useTransition();
+  const purchaseList = state.purchaseLists.find((list) => list.id === purchaseListId);
+  const lines = state.purchaseListLines.filter((line) => line.purchaseListId === purchaseListId);
+  const defaultSupplierId =
+    lines.find((line) => line.supplierId)?.supplierId ?? state.suppliers[0]?.id ?? "";
+  const lineKeys = lines.map((line) => line.id);
+  const disabledReason =
+    !purchaseList || !lines.length || !state.suppliers.length || purchaseList.status === "received";
+
+  async function action(formData: FormData) {
+    const date = asString(formData, "date", today());
+    const purchaseUrl = asString(formData, "purchaseUrl");
+    const notes = asString(formData, "notes");
+    const groupedLines = new Map<string, Array<Record<string, string | number>>>();
+
+    for (const key of lineKeys) {
+      const supplierId = asString(formData, `supplierId-${key}`, defaultSupplierId);
+      if (!supplierId) {
+        throw new Error("Supplier is required for every received purchase-list line.");
+      }
+
+      const group = groupedLines.get(supplierId) ?? [];
+      group.push({
+        material_variant_id: asString(formData, `materialVariantId-${key}`),
+        quantity_purchased: asNumber(formData, `quantityPurchased-${key}`, 1),
+        purchase_unit: asString(formData, `purchaseUnit-${key}`, "pack"),
+        total_price: asNumber(formData, `totalPrice-${key}`, 0),
+        quantity_added_usage_unit: asNumber(formData, `quantityAddedUsageUnit-${key}`, 0),
+        notes: asString(formData, `lineNotes-${key}`),
+      });
+      groupedLines.set(supplierId, group);
+    }
+
+    try {
+      for (const [supplierId, groupLines] of groupedLines) {
+        await recordPurchaseAction({
+          supplierId,
+          date,
+          shippingCost: 0,
+          discount: 0,
+          purchaseListId,
+          purchaseUrl,
+          notes,
+          lines: groupLines,
+        });
+      }
+
+      toast.success("Purchase list received", {
+        description: "Purchase receipt records were created and raw material stock was updated.",
+      });
+      startRefresh(() => router.refresh());
+    } catch (error) {
+      toast.error("Receiving failed", {
+        description: error instanceof Error ? error.message : "Unknown receiving error.",
+      });
+    }
+  }
+
+  return (
+    <Dialog>
+      <DialogTrigger render={<Button variant="outline" size="sm" disabled={disabled || disabledReason} />}>
+        <PackageCheck data-icon="inline-start" aria-hidden />
+        Receive
+      </DialogTrigger>
+      <DialogContent className="max-h-[min(90svh,920px)] overflow-y-auto sm:max-w-4xl">
+        <form action={action} className="flex flex-col gap-5" aria-busy={isRefreshing}>
+          <div>
+            <h2 className="text-lg font-semibold">Receive Purchase List</h2>
+            <p className="mt-1 text-sm text-muted-foreground">
+              Review actual suppliers, quantities, and prices. Saving creates purchase receipts and increases raw material stock.
+            </p>
+          </div>
+
+          <FieldGroup>
+            <div className="grid gap-3 sm:grid-cols-2">
+              <Field>
+                <FieldLabel htmlFor={`purchase-list-date-${purchaseListId}`}>Receipt date</FieldLabel>
+                <Input
+                  id={`purchase-list-date-${purchaseListId}`}
+                  name="date"
+                  type="date"
+                  defaultValue={today()}
+                  required
+                />
+              </Field>
+              <Field>
+                <FieldLabel htmlFor={`purchase-list-url-${purchaseListId}`}>Purchase link</FieldLabel>
+                <Input
+                  id={`purchase-list-url-${purchaseListId}`}
+                  name="purchaseUrl"
+                  type="url"
+                  placeholder="https://shopee.co.id/..."
+                />
+              </Field>
+            </div>
+            <Field>
+              <FieldLabel htmlFor={`purchase-list-notes-${purchaseListId}`}>Notes</FieldLabel>
+              <Input
+                id={`purchase-list-notes-${purchaseListId}`}
+                name="notes"
+                defaultValue={`Received from purchase list ${purchaseListId.slice(0, 8)}`}
+              />
+            </Field>
+          </FieldGroup>
+
+          <div className="overflow-hidden rounded-lg border">
+            <Table>
+              <TableHeader>
+                <TableRow>
+                  <TableHead>Material</TableHead>
+                  <TableHead>Supplier</TableHead>
+                  <TableHead>Purchase Qty</TableHead>
+                  <TableHead>Added Stock</TableHead>
+                  <TableHead>Total Price</TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {lines.map((line) => {
+                  const variant = state.materialVariants.find((item) => item.id === line.materialVariantId);
+                  const material = state.materials.find((item) => item.id === variant?.materialId);
+                  const estimatedPrice = Math.round(line.recommendedPurchaseQuantity * (variant?.costPerUsageUnit ?? 0));
+
+                  return (
+                    <TableRow key={line.id}>
+                      <TableCell className="min-w-44">
+                        <input type="hidden" name={`materialVariantId-${line.id}`} value={line.materialVariantId} />
+                        <input type="hidden" name={`purchaseUnit-${line.id}`} value={line.purchaseUnit} />
+                        <div className="font-medium">{variant?.name ?? "Unknown material"}</div>
+                        <div className="text-xs text-muted-foreground">
+                          Need {formatQuantity(line.recommendedPurchaseQuantity, line.usageUnit)}
+                        </div>
+                      </TableCell>
+                      <TableCell className="min-w-48">
+                        <EntitySelect
+                          name={`supplierId-${line.id}`}
+                          defaultValue={line.supplierId ?? material?.preferredSupplierId ?? defaultSupplierId}
+                          placeholder="Select supplier"
+                          items={state.suppliers.map((supplier) => ({
+                            value: supplier.id,
+                            label: supplier.name,
+                            description: supplier.channel,
+                          }))}
+                        />
+                      </TableCell>
+                      <TableCell className="min-w-32">
+                        <Input
+                          name={`quantityPurchased-${line.id}`}
+                          type="number"
+                          step="0.0001"
+                          defaultValue="1"
+                          required
+                        />
+                      </TableCell>
+                      <TableCell className="min-w-36">
+                        <Input
+                          name={`quantityAddedUsageUnit-${line.id}`}
+                          type="number"
+                          step="0.0001"
+                          defaultValue={line.recommendedPurchaseQuantity}
+                          required
+                        />
+                      </TableCell>
+                      <TableCell className="min-w-36">
+                        <Input
+                          name={`totalPrice-${line.id}`}
+                          type="number"
+                          defaultValue={estimatedPrice}
+                          required
+                        />
+                        <input
+                          type="hidden"
+                          name={`lineNotes-${line.id}`}
+                          value={`Received for ${formatQuantity(line.recommendedPurchaseQuantity, line.usageUnit)} purchase-list shortage.`}
+                        />
+                      </TableCell>
+                    </TableRow>
+                  );
+                })}
+              </TableBody>
+            </Table>
+          </div>
+
+          <div className="flex items-center justify-between gap-3">
+            <div className="text-sm text-muted-foreground">
+              Lines with different suppliers will create separate purchase receipts.
+            </div>
+            <Button type="submit" disabled={isRefreshing} aria-busy={isRefreshing}>
+              {isRefreshing ? (
+                <>
+                  <Loader2 data-icon="inline-start" aria-hidden className="animate-spin" />
+                  Receiving...
+                </>
+              ) : (
+                "Receive purchase list"
+              )}
+            </Button>
+          </div>
+          <RefreshingIndicator show={isRefreshing} />
+        </form>
       </DialogContent>
     </Dialog>
   );

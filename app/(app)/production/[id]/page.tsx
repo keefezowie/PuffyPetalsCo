@@ -3,6 +3,7 @@ import { notFound } from "next/navigation";
 import {
   CompleteProductionBatchButton,
   PurchaseListFromBatchButton,
+  ReceivePurchaseListButton,
 } from "@/components/forms/mto-shortcuts";
 import { PageHeader } from "@/components/layout/page-helpers";
 import { Badge } from "@/components/ui/badge";
@@ -136,22 +137,31 @@ export default async function ProductionBatchDetailPage({
                 <TableHead>Status</TableHead>
                 <TableHead>Lines</TableHead>
                 <TableHead>Notes</TableHead>
+                <TableHead>Action</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
               {purchaseLists.length ? purchaseLists.map((list) => {
                 const listLines = state.purchaseListLines.filter((line) => line.purchaseListId === list.id);
+                const receipt = state.purchases.find((purchase) => purchase.purchaseListId === list.id);
                 return (
                   <TableRow key={list.id}>
                     <TableCell>{formatDate(list.createdAt)}</TableCell>
                     <TableCell><Badge variant="outline">{list.status}</Badge></TableCell>
                     <TableCell>{listLines.length}</TableCell>
                     <TableCell>{list.notes}</TableCell>
+                    <TableCell>
+                      <ReceivePurchaseListButton
+                        state={state}
+                        purchaseListId={list.id}
+                        disabled={!!receipt || list.status === "received"}
+                      />
+                    </TableCell>
                   </TableRow>
                 );
               }) : (
                 <TableRow>
-                  <TableCell colSpan={4}>No purchase lists are linked to this batch.</TableCell>
+                  <TableCell colSpan={5}>No purchase lists are linked to this batch.</TableCell>
                 </TableRow>
               )}
             </TableBody>

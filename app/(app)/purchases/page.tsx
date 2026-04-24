@@ -1,4 +1,5 @@
 import { PurchaseEntryForm } from "@/components/forms/purchase-entry-form";
+import { ReceivePurchaseListButton } from "@/components/forms/mto-shortcuts";
 import { PageHeader } from "@/components/layout/page-helpers";
 import { buttonVariants } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -99,6 +100,7 @@ export default async function PurchasesPage() {
                   <TableHead>Materials</TableHead>
                   <TableHead>Status</TableHead>
                   <TableHead>Receipt</TableHead>
+                  <TableHead>Action</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
@@ -130,11 +132,18 @@ export default async function PurchasesPage() {
                       <TableCell>
                         {receipt ? formatDate(receipt.date) : <span className="text-sm text-muted-foreground">Not received</span>}
                       </TableCell>
+                      <TableCell>
+                        <ReceivePurchaseListButton
+                          state={state}
+                          purchaseListId={list.id}
+                          disabled={!!receipt || list.status === "received"}
+                        />
+                      </TableCell>
                     </TableRow>
                   );
                 }) : (
                   <TableRow>
-                    <TableCell colSpan={6} className="h-40">
+                    <TableCell colSpan={7} className="h-40">
                       <EmptyState
                         title="No purchase lists"
                         description="Create one from a production batch when materials are short."
