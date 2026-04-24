@@ -45,7 +45,7 @@ export default async function MaterialsPage() {
           </CardDescription>
         </CardHeader>
         <CardContent>
-          <MaterialsTable data={rows} />
+          <MaterialsTable data={rows} state={state} />
         </CardContent>
       </Card>
     </>

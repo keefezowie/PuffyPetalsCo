@@ -82,8 +82,8 @@ export function KpiCard({
 }) {
   const toneClass = {
     neutral: "bg-muted text-muted-foreground",
-    success: "bg-emerald-500/10 text-emerald-700 dark:text-emerald-300",
-    warning: "bg-amber-500/10 text-amber-700 dark:text-amber-300",
+    success: "bg-accent text-accent-foreground",
+    warning: "bg-[#a58b71]/15 text-[#5d4b3a] dark:text-[#e5dfd6]",
     danger: "bg-destructive/10 text-destructive",
     info: "bg-primary/10 text-primary",
   }[tone];

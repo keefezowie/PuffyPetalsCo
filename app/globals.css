@@ -49,72 +49,72 @@
 }
 
 :root {
-  --background: oklch(0.985 0.006 95);
-  --foreground: oklch(0.18 0.018 165);
-  --card: oklch(1 0 0);
-  --card-foreground: oklch(0.18 0.018 165);
-  --popover: oklch(1 0 0);
-  --popover-foreground: oklch(0.18 0.018 165);
-  --primary: oklch(0.36 0.085 172);
-  --primary-foreground: oklch(0.985 0 0);
-  --secondary: oklch(0.955 0.018 165);
-  --secondary-foreground: oklch(0.24 0.035 165);
-  --muted: oklch(0.945 0.01 95);
-  --muted-foreground: oklch(0.46 0.018 165);
-  --accent: oklch(0.95 0.04 45);
-  --accent-foreground: oklch(0.3 0.06 52);
-  --destructive: oklch(0.56 0.2 28);
-  --border: oklch(0.88 0.012 95);
-  --input: oklch(0.9 0.012 95);
-  --ring: oklch(0.58 0.09 172);
-  --chart-1: oklch(0.6 0.13 172);
-  --chart-2: oklch(0.64 0.14 238);
-  --chart-3: oklch(0.74 0.14 78);
-  --chart-4: oklch(0.68 0.17 32);
-  --chart-5: oklch(0.66 0.13 335);
+  --background: #e5dfd6;
+  --foreground: #33362c;
+  --card: #f3eee7;
+  --card-foreground: #33362c;
+  --popover: #f3eee7;
+  --popover-foreground: #33362c;
+  --primary: #ae6965;
+  --primary-foreground: #fffaf4;
+  --secondary: #d1a9a5;
+  --secondary-foreground: #33362c;
+  --muted: #d8cabc;
+  --muted-foreground: #62594c;
+  --accent: #7a816c;
+  --accent-foreground: #fffaf4;
+  --destructive: #ae6965;
+  --border: #cbbdaf;
+  --input: #cbbdaf;
+  --ring: #ae6965;
+  --chart-1: #ae6965;
+  --chart-2: #7a816c;
+  --chart-3: #d1a9a5;
+  --chart-4: #a58b71;
+  --chart-5: #e5dfd6;
   --radius: 0.5rem;
-  --sidebar: oklch(0.965 0.014 95);
-  --sidebar-foreground: oklch(0.2 0.018 165);
-  --sidebar-primary: oklch(0.36 0.085 172);
-  --sidebar-primary-foreground: oklch(0.985 0 0);
-  --sidebar-accent: oklch(0.92 0.028 165);
-  --sidebar-accent-foreground: oklch(0.24 0.035 165);
-  --sidebar-border: oklch(0.86 0.015 95);
-  --sidebar-ring: oklch(0.58 0.09 172);
+  --sidebar: #d8cabc;
+  --sidebar-foreground: #33362c;
+  --sidebar-primary: #ae6965;
+  --sidebar-primary-foreground: #fffaf4;
+  --sidebar-accent: #d1a9a5;
+  --sidebar-accent-foreground: #33362c;
+  --sidebar-border: #c1b09f;
+  --sidebar-ring: #ae6965;
 }
 
 .dark {
-  --background: oklch(0.15 0.018 165);
-  --foreground: oklch(0.965 0.006 95);
-  --card: oklch(0.205 0.02 165);
-  --card-foreground: oklch(0.985 0 0);
-  --popover: oklch(0.205 0.02 165);
-  --popover-foreground: oklch(0.985 0 0);
-  --primary: oklch(0.72 0.12 172);
-  --primary-foreground: oklch(0.145 0.02 165);
-  --secondary: oklch(0.28 0.028 165);
-  --secondary-foreground: oklch(0.985 0 0);
-  --muted: oklch(0.26 0.018 165);
-  --muted-foreground: oklch(0.72 0.018 95);
-  --accent: oklch(0.31 0.05 45);
-  --accent-foreground: oklch(0.96 0.02 80);
-  --destructive: oklch(0.68 0.18 25);
+  --background: #33362c;
+  --foreground: #e5dfd6;
+  --card: #3f4438;
+  --card-foreground: #e5dfd6;
+  --popover: #3f4438;
+  --popover-foreground: #e5dfd6;
+  --primary: #d1a9a5;
+  --primary-foreground: #33362c;
+  --secondary: #7a816c;
+  --secondary-foreground: #fffaf4;
+  --muted: #5c604f;
+  --muted-foreground: #d8cabc;
+  --accent: #a58b71;
+  --accent-foreground: #fffaf4;
+  --destructive: #d1a9a5;
   --border: oklch(1 0 0 / 10%);
   --input: oklch(1 0 0 / 15%);
-  --ring: oklch(0.72 0.12 172);
-  --chart-1: oklch(0.72 0.13 172);
-  --chart-2: oklch(0.72 0.13 238);
-  --chart-3: oklch(0.78 0.16 75);
-  --chart-4: oklch(0.7 0.18 28);
-  --chart-5: oklch(0.72 0.12 315);
-  --sidebar: oklch(0.18 0.02 165);
-  --sidebar-foreground: oklch(0.985 0 0);
-  --sidebar-primary: oklch(0.72 0.12 172);
-  --sidebar-primary-foreground: oklch(0.985 0 0);
-  --sidebar-accent: oklch(0.27 0.028 165);
-  --sidebar-accent-foreground: oklch(0.985 0 0);
+  --ring: #d1a9a5;
+  --chart-1: #d1a9a5;
+  --chart-2: #7a816c;
+  --chart-3: #ae6965;
+  --chart-4: #a58b71;
+  --chart-5: #e5dfd6;
+  --sidebar: #33362c;
+  --sidebar-foreground: #e5dfd6;
+  --sidebar-primary: #d1a9a5;
+  --sidebar-primary-foreground: #33362c;
+  --sidebar-accent: #5c604f;
+  --sidebar-accent-foreground: #e5dfd6;
   --sidebar-border: oklch(1 0 0 / 10%);
-  --sidebar-ring: oklch(0.72 0.12 172);
+  --sidebar-ring: #d1a9a5;
 }
 
 @layer base {
@@ -139,8 +139,9 @@
 @layer utilities {
   .surface-warm {
     background:
-      radial-gradient(circle at top left, oklch(0.93 0.06 45 / 45%), transparent 34rem),
-      linear-gradient(180deg, oklch(1 0 0 / 70%), transparent 20rem);
+      radial-gradient(circle at top left, color-mix(in oklab, #d1a9a5 42%, transparent), transparent 34rem),
+      radial-gradient(circle at top right, color-mix(in oklab, #7a816c 22%, transparent), transparent 28rem),
+      linear-gradient(180deg, color-mix(in oklab, #e5dfd6 70%, white), transparent 20rem);
   }
 
   .numeric {

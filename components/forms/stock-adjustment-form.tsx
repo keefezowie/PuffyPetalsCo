@@ -2,7 +2,7 @@
 
 import { SlidersHorizontal } from "lucide-react";
 import { useRouter } from "next/navigation";
-import { useTransition } from "react";
+import { useState, useTransition } from "react";
 import { toast } from "sonner";
 
 import { EntitySelect } from "@/components/forms/entity-select";
@@ -16,10 +16,27 @@ import { RefreshingIndicator } from "@/components/ui/state-views";
 import { createStockAdjustmentAction } from "@/lib/services/supabase-inventory";
 import type { InventoryState } from "@/lib/types";
 
-export function StockAdjustmentForm({ state }: { state: InventoryState }) {
+export function StockAdjustmentForm({
+  state,
+  defaultVariantId,
+  triggerLabel = "Quick adjustment",
+  triggerVariant = "outline",
+  triggerSize = "default",
+}: {
+  state: InventoryState;
+  defaultVariantId?: string;
+  triggerLabel?: string;
+  triggerVariant?: "default" | "outline";
+  triggerSize?: "default" | "sm";
+}) {
   const router = useRouter();
   const [isRefreshing, startRefresh] = useTransition();
-  const defaultVariant = state.materialVariants[0]?.id ?? "";
+  const defaultVariant =
+    defaultVariantId && state.materialVariants.some((entry) => entry.id === defaultVariantId)
+      ? defaultVariantId
+      : state.materialVariants[0]?.id ?? "";
+  const [selectedVariantId, setSelectedVariantId] = useState(defaultVariant);
+  const selectedVariant = state.materialVariants.find((entry) => entry.id === selectedVariantId);
 
   async function action(formData: FormData) {
     const itemId = String(formData.get("itemId") ?? "");
@@ -54,9 +71,9 @@ export function StockAdjustmentForm({ state }: { state: InventoryState }) {
 
   return (
     <Dialog>
-      <DialogTrigger render={<Button variant="outline" />}>
-        <SlidersHorizontal data-icon="inline-start" aria-hidden />
-        Quick adjustment
+      <DialogTrigger render={<Button variant={triggerVariant} size={triggerSize} />}>
+        {triggerSize === "default" ? <SlidersHorizontal data-icon="inline-start" aria-hidden /> : null}
+        {triggerLabel}
       </DialogTrigger>
       <DialogContent className="max-h-[min(90svh,720px)] overflow-y-auto sm:max-w-xl">
     <Card className="border-0 shadow-none">
@@ -77,6 +94,7 @@ export function StockAdjustmentForm({ state }: { state: InventoryState }) {
               <EntitySelect
                 name="itemId"
                 defaultValue={defaultVariant}
+                onValueChange={setSelectedVariantId}
                 placeholder="Select material variant"
                 items={state.materialVariants.map((variant) => {
                   const material = state.materials.find((entry) => entry.id === variant.materialId);
@@ -95,7 +113,15 @@ export function StockAdjustmentForm({ state }: { state: InventoryState }) {
             </Field>
             <Field>
               <FieldLabel htmlFor="unitCost">Unit cost</FieldLabel>
-              <Input id="unitCost" name="unitCost" type="number" step="0.0001" defaultValue="0" required />
+              <Input
+                key={selectedVariant?.id ?? "unit-cost"}
+                id="unitCost"
+                name="unitCost"
+                type="number"
+                step="0.0001"
+                defaultValue={selectedVariant?.costPerUsageUnit ?? 0}
+                required
+              />
             </Field>
             <Field>
               <FieldLabel htmlFor="reason">Reason</FieldLabel>

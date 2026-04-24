@@ -2,12 +2,14 @@
 
 import type { ColumnDef } from "@tanstack/react-table";
 import Link from "next/link";
+import { useMemo } from "react";
 
+import { StockAdjustmentForm } from "@/components/forms/stock-adjustment-form";
 import { DataTable } from "@/components/tables/data-table";
 import { Badge } from "@/components/ui/badge";
-import { Button } from "@/components/ui/button";
 import { QuantityCell, MoneyCell, StatusBadge } from "@/components/ui/data-display";
 import { formatQuantity, formatRupiahDecimal } from "@/lib/formatters";
+import type { InventoryState } from "@/lib/types";
 
 export interface MaterialRow {
   id: string;
@@ -23,7 +25,8 @@ export interface MaterialRow {
   estimationStatus: string;
 }
 
-const columns: ColumnDef<MaterialRow>[] = [
+function createColumns(state: InventoryState): ColumnDef<MaterialRow>[] {
+  return [
   {
     accessorKey: "variantName",
     header: "Variant",
@@ -81,15 +84,21 @@ const columns: ColumnDef<MaterialRow>[] = [
   },
   {
     id: "actions",
-    cell: () => (
-      <Button variant="outline" size="sm">
-        Adjust
-      </Button>
+    cell: ({ row }) => (
+      <StockAdjustmentForm
+        state={state}
+        defaultVariantId={row.original.id}
+        triggerLabel="Adjust"
+        triggerSize="sm"
+      />
     ),
   },
-];
+  ];
+}
 
-export function MaterialsTable({ data }: { data: MaterialRow[] }) {
+export function MaterialsTable({ data, state }: { data: MaterialRow[]; state: InventoryState }) {
+  const columns = useMemo(() => createColumns(state), [state]);
+
   return (
     <DataTable
       columns={columns}
@@ -123,6 +132,14 @@ export function MaterialsTable({ data }: { data: MaterialRow[] }) {
               <div className="text-xs text-muted-foreground">Unit cost</div>
               <div className="numeric font-medium">{formatRupiahDecimal(row.costPerUsageUnit)}</div>
             </div>
+          </div>
+          <div className="mt-3 flex justify-end">
+            <StockAdjustmentForm
+              state={state}
+              defaultVariantId={row.id}
+              triggerLabel="Adjust"
+              triggerSize="sm"
+            />
           </div>
         </div>
       )}

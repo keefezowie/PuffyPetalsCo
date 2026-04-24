@@ -233,8 +233,8 @@ export default async function DashboardPage() {
           <CardDescription>Problems to resolve before production or fulfillment.</CardDescription>
         </CardHeader>
         <CardContent className="grid gap-3 md:grid-cols-3">
-          <div className="flex items-start gap-3 rounded-lg border bg-amber-500/5 p-3">
-            <AlertTriangle aria-hidden className="text-amber-600" />
+          <div className="flex items-start gap-3 rounded-lg border bg-[#a58b71]/15 p-3">
+            <AlertTriangle aria-hidden className="text-[#5d4b3a] dark:text-[#e5dfd6]" />
             <div>
               <div className="font-medium">
                 {lowStock[0] ? "Limiting material" : "Material stock healthy"}
@@ -257,8 +257,8 @@ export default async function DashboardPage() {
               </div>
             </div>
           </div>
-          <div className="flex items-start gap-3 rounded-lg border bg-emerald-500/5 p-3">
-            <CircleDollarSign aria-hidden className="text-emerald-600" />
+          <div className="flex items-start gap-3 rounded-lg border bg-accent p-3">
+            <CircleDollarSign aria-hidden className="text-accent-foreground" />
             <div>
               <div className="font-medium">Margin review</div>
               <div className="text-sm text-muted-foreground">
