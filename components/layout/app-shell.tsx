@@ -109,7 +109,7 @@ export function AppShell({
             </div>
           </div>
           <Separator />
-          <nav className="flex flex-1 flex-col gap-4 overflow-y-auto p-3">
+          <nav className="scrollbar-none flex flex-1 flex-col gap-4 overflow-y-auto p-3">
             {navGroups.map((group) => (
               <div key={group.label} className="flex flex-col gap-1">
                 <div className="px-2 pb-1 text-[11px] font-semibold uppercase tracking-wide text-muted-foreground">
@@ -160,7 +160,7 @@ export function AppShell({
                       <div className="text-xs text-muted-foreground">Operations workspace</div>
                     </div>
                   </div>
-                  <nav className="flex flex-1 flex-col gap-4 overflow-y-auto p-3">
+                  <nav className="scrollbar-none flex flex-1 flex-col gap-4 overflow-y-auto p-3">
                     {navGroups.map((group) => (
                       <div key={group.label} className="flex flex-col gap-1">
                         <div className="px-2 pb-1 text-[11px] font-semibold uppercase tracking-wide text-muted-foreground">
