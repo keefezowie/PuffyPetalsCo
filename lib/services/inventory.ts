@@ -912,9 +912,7 @@ export function fulfillOrder(state: InventoryState, orderId: string) {
     netRevenue - cogs - order.shippingCostPaid - order.packagingCost;
   const updatedOrder: Order = {
     ...order,
-    status: ["completed", "cancelled", "returned"].includes(order.status)
-      ? order.status
-      : "packed",
+    status: "packed",
     fulfillmentStatus: "fulfilled",
     subtotal,
     netRevenue,

@@ -290,7 +290,7 @@ export async function recordPurchaseAction(input: {
 }
 
 export async function fulfillOrderAction(orderId: string) {
-  const { supabase } = await getMutationContext();
+  const { supabase, db, user } = await getMutationContext();
   const rpc = supabase as unknown as RpcClient;
   const { data, error } = await rpc.rpc("fulfill_order", {
     p_order_id: orderId,
@@ -298,6 +298,20 @@ export async function fulfillOrderAction(orderId: string) {
 
   if (error) {
     throw new Error(error.message);
+  }
+
+  const { error: statusError } = await db
+    .from("orders")
+    .update({
+      status: "packed",
+      fulfillment_status: "fulfilled",
+      stock_deducted: true,
+    })
+    .eq("id", orderId)
+    .eq("owner_id", user.id);
+
+  if (statusError) {
+    throw new Error(statusError.message);
   }
 
   revalidatePath("/orders");

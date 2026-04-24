@@ -10,6 +10,12 @@ alter table public.material_variants
 update public.materials set category = 'stem' where category::text = 'wire';
 update public.materials set category = 'accessory' where category::text = 'string';
 
+update public.orders
+set status = 'packed',
+    fulfillment_status = 'fulfilled'
+where stock_deducted = true
+  and status not in ('packed', 'shipped', 'completed', 'cancelled', 'returned');
+
 drop index if exists public.purchase_lists_one_open_per_batch_idx;
 
 create unique index if not exists purchase_lists_one_per_batch_idx
@@ -218,10 +224,7 @@ begin
   end loop;
 
   update public.orders
-  set status = case
-        when status in ('completed', 'cancelled', 'returned') then status
-        else 'packed'
-      end,
+  set status = 'packed',
       fulfillment_status = 'fulfilled',
       subtotal = v_subtotal,
       cogs = v_cogs,
