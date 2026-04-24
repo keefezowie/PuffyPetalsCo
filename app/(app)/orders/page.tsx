@@ -26,16 +26,15 @@ export default async function OrdersPage() {
         title="Orders"
         description="Track platform orders, status, revenue, COGS, and profit without double-deducting stock."
         eyebrow="Sales operations"
+        action={<OrderCreateForm state={state} />}
       />
-      <section className="grid gap-4 xl:grid-cols-[0.85fr_1.15fr]">
-        <OrderCreateForm state={state} />
-        <Card>
-          <CardHeader>
-            <CardTitle>Sales Orders</CardTitle>
-            <CardDescription>Status transitions control reservation and fulfillment behavior.</CardDescription>
-          </CardHeader>
-          <CardContent>
-            <Table>
+      <Card>
+        <CardHeader>
+          <CardTitle>Sales Orders</CardTitle>
+          <CardDescription>Status transitions control reservation and fulfillment behavior.</CardDescription>
+        </CardHeader>
+        <CardContent>
+          <Table>
               <TableHeader>
                 <TableRow>
                   <TableHead>Order</TableHead>
@@ -81,10 +80,9 @@ export default async function OrdersPage() {
                   </TableRow>
                 )}
               </TableBody>
-            </Table>
-          </CardContent>
-        </Card>
-      </section>
+          </Table>
+        </CardContent>
+      </Card>
     </>
   );
 }

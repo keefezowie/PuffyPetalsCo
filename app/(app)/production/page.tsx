@@ -23,8 +23,8 @@ export default async function ProductionPage() {
         title="Production"
         description="Check shortages before saving a batch. Negative stock is blocked by default."
         eyebrow="Batch workflow"
+        action={<ProductionPlanner initialState={state} />}
       />
-      <ProductionPlanner initialState={state} />
 
       <Card>
         <CardHeader>

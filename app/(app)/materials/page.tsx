@@ -1,10 +1,7 @@
-import { SlidersHorizontal } from "lucide-react";
-
 import { MaterialCreateForm } from "@/components/forms/master-data-forms";
 import { StockAdjustmentForm } from "@/components/forms/stock-adjustment-form";
 import { PageHeader } from "@/components/layout/page-helpers";
 import { MaterialsTable, type MaterialRow } from "@/components/tables/materials-table";
-import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { getInventoryState } from "@/lib/data/inventory-loader";
 
@@ -34,27 +31,23 @@ export default async function MaterialsPage() {
         description="Raw material families and variants, including pearl sizes stored as variants instead of unrelated materials."
         eyebrow="Raw inventory"
         action={
-          <Button variant="outline">
-            <SlidersHorizontal data-icon="inline-start" aria-hidden />
-            Quick adjustment
-          </Button>
+          <>
+            <StockAdjustmentForm state={state} />
+            <MaterialCreateForm state={state} />
+          </>
         }
       />
-      <section className="grid gap-4 xl:grid-cols-[0.9fr_1.1fr]">
-        <MaterialCreateForm state={state} />
-        <Card>
-          <CardHeader>
-            <CardTitle>Raw Material Stock</CardTitle>
-            <CardDescription>
-              Search, sort, and review stock thresholds before purchasing or production.
-            </CardDescription>
-          </CardHeader>
-          <CardContent>
-            <MaterialsTable data={rows} />
-          </CardContent>
-        </Card>
-      </section>
-      <StockAdjustmentForm state={state} />
+      <Card>
+        <CardHeader>
+          <CardTitle>Raw Material Stock</CardTitle>
+          <CardDescription>
+            Search, sort, and review stock thresholds before purchasing or production.
+          </CardDescription>
+        </CardHeader>
+        <CardContent>
+          <MaterialsTable data={rows} />
+        </CardContent>
+      </Card>
     </>
   );
 }

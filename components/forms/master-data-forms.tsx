@@ -3,6 +3,7 @@
 import {
   Boxes,
   Flower2,
+  Plus,
   Settings2,
   ShoppingBag,
   Store,
@@ -11,7 +12,14 @@ import { useRouter } from "next/navigation";
 import { useTransition } from "react";
 import { toast } from "sonner";
 
+import { EntitySelect } from "@/components/forms/entity-select";
+import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import {
+  Dialog,
+  DialogContent,
+  DialogTrigger,
+} from "@/components/ui/dialog";
 import { Field, FieldDescription, FieldGroup, FieldLabel } from "@/components/ui/field";
 import { Input } from "@/components/ui/input";
 import { PendingButton } from "@/components/ui/pending-button";
@@ -75,6 +83,26 @@ function useRefreshToast() {
   };
 }
 
+function FormDialog({
+  buttonLabel,
+  children,
+}: {
+  buttonLabel: string;
+  children: React.ReactNode;
+}) {
+  return (
+    <Dialog>
+      <DialogTrigger render={<Button />}>
+        <Plus data-icon="inline-start" aria-hidden />
+        {buttonLabel}
+      </DialogTrigger>
+      <DialogContent className="max-h-[min(90svh,920px)] overflow-y-auto sm:max-w-2xl">
+        {children}
+      </DialogContent>
+    </Dialog>
+  );
+}
+
 export function SupplierCreateForm() {
   const { isRefreshing, refresh } = useRefreshToast();
 
@@ -100,7 +128,8 @@ export function SupplierCreateForm() {
   }
 
   return (
-    <Card>
+    <FormDialog buttonLabel="Add supplier">
+    <Card className="border-0 shadow-none">
       <CardHeader>
         <CardTitle className="flex items-center gap-2">
           <Store aria-hidden />
@@ -153,6 +182,7 @@ export function SupplierCreateForm() {
         </form>
       </CardContent>
     </Card>
+    </FormDialog>
   );
 }
 
@@ -193,7 +223,8 @@ export function MaterialCreateForm({ state }: { state: InventoryState }) {
   }
 
   return (
-    <Card>
+    <FormDialog buttonLabel="Add material">
+    <Card className="border-0 shadow-none">
       <CardHeader>
         <CardTitle className="flex items-center gap-2">
           <Boxes aria-hidden />
@@ -273,21 +304,19 @@ export function MaterialCreateForm({ state }: { state: InventoryState }) {
             </div>
             <Field>
               <FieldLabel>Preferred supplier</FieldLabel>
-              <Select name="preferredSupplierId" defaultValue={state.suppliers[0]?.id ?? "none"}>
-                <SelectTrigger className="w-full">
-                  <SelectValue placeholder="No supplier" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectGroup>
-                    <SelectItem value="none">No supplier</SelectItem>
-                    {state.suppliers.map((supplier) => (
-                      <SelectItem key={supplier.id} value={supplier.id}>
-                        {supplier.name}
-                      </SelectItem>
-                    ))}
-                  </SelectGroup>
-                </SelectContent>
-              </Select>
+              <EntitySelect
+                name="preferredSupplierId"
+                defaultValue={state.suppliers[0]?.id ?? "none"}
+                placeholder="No supplier"
+                items={[
+                  { value: "none", label: "No supplier" },
+                  ...state.suppliers.map((supplier) => ({
+                    value: supplier.id,
+                    label: supplier.name,
+                    description: supplier.channel,
+                  })),
+                ]}
+              />
             </Field>
             <Field>
               <FieldLabel htmlFor="variant-name">Variant name</FieldLabel>
@@ -338,6 +367,7 @@ export function MaterialCreateForm({ state }: { state: InventoryState }) {
         </form>
       </CardContent>
     </Card>
+    </FormDialog>
   );
 }
 
@@ -374,7 +404,8 @@ export function ProductCreateForm({ state }: { state: InventoryState }) {
   }
 
   return (
-    <Card>
+    <FormDialog buttonLabel="Add product">
+    <Card className="border-0 shadow-none">
       <CardHeader>
         <CardTitle className="flex items-center gap-2">
           <Flower2 aria-hidden />
@@ -429,20 +460,19 @@ export function ProductCreateForm({ state }: { state: InventoryState }) {
             </Field>
             <Field>
               <FieldLabel>BOM material</FieldLabel>
-              <Select name="materialVariantId" defaultValue={defaultVariant}>
-                <SelectTrigger className="w-full">
-                  <SelectValue placeholder="Select material" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectGroup>
-                    {state.materialVariants.map((variant) => (
-                      <SelectItem key={variant.id} value={variant.id}>
-                        {variant.name}
-                      </SelectItem>
-                    ))}
-                  </SelectGroup>
-                </SelectContent>
-              </Select>
+              <EntitySelect
+                name="materialVariantId"
+                defaultValue={defaultVariant}
+                placeholder="Select material"
+                items={state.materialVariants.map((variant) => {
+                  const material = state.materials.find((entry) => entry.id === variant.materialId);
+                  return {
+                    value: variant.id,
+                    label: variant.name,
+                    description: material?.name,
+                  };
+                })}
+              />
             </Field>
             <div className="grid gap-3 sm:grid-cols-2">
               <Field>
@@ -466,6 +496,7 @@ export function ProductCreateForm({ state }: { state: InventoryState }) {
         </form>
       </CardContent>
     </Card>
+    </FormDialog>
   );
 }
 
@@ -505,7 +536,8 @@ export function OrderCreateForm({ state }: { state: InventoryState }) {
   }
 
   return (
-    <Card>
+    <FormDialog buttonLabel="Add order">
+    <Card className="border-0 shadow-none">
       <CardHeader>
         <CardTitle className="flex items-center gap-2">
           <ShoppingBag aria-hidden />
@@ -579,18 +611,16 @@ export function OrderCreateForm({ state }: { state: InventoryState }) {
             </div>
             <Field>
               <FieldLabel>Product</FieldLabel>
-              <Select name="productId" defaultValue={defaultProduct?.id ?? ""}>
-                <SelectTrigger className="w-full">
-                  <SelectValue placeholder="Select product" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectGroup>
-                    {state.products.map((product) => (
-                      <SelectItem key={product.id} value={product.id}>{product.name}</SelectItem>
-                    ))}
-                  </SelectGroup>
-                </SelectContent>
-              </Select>
+              <EntitySelect
+                name="productId"
+                defaultValue={defaultProduct?.id ?? ""}
+                placeholder="Select product"
+                items={state.products.map((product) => ({
+                  value: product.id,
+                  label: product.name,
+                  description: product.sku,
+                }))}
+              />
             </Field>
             <div className="grid gap-3 sm:grid-cols-2">
               <Field>
@@ -638,6 +668,7 @@ export function OrderCreateForm({ state }: { state: InventoryState }) {
         </form>
       </CardContent>
     </Card>
+    </FormDialog>
   );
 }
 
@@ -669,7 +700,8 @@ export function SettingsUpdateForm({ state }: { state: InventoryState }) {
   }
 
   return (
-    <Card>
+    <FormDialog buttonLabel="Update settings">
+    <Card className="border-0 shadow-none">
       <CardHeader>
         <CardTitle className="flex items-center gap-2">
           <Settings2 aria-hidden />
@@ -714,5 +746,6 @@ export function SettingsUpdateForm({ state }: { state: InventoryState }) {
         </form>
       </CardContent>
     </Card>
+    </FormDialog>
   );
 }

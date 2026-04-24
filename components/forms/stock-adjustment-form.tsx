@@ -5,11 +5,13 @@ import { useRouter } from "next/navigation";
 import { useTransition } from "react";
 import { toast } from "sonner";
 
+import { EntitySelect } from "@/components/forms/entity-select";
+import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { Dialog, DialogContent, DialogTrigger } from "@/components/ui/dialog";
 import { Field, FieldDescription, FieldGroup, FieldLabel } from "@/components/ui/field";
 import { Input } from "@/components/ui/input";
 import { PendingButton } from "@/components/ui/pending-button";
-import { Select, SelectContent, SelectGroup, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { RefreshingIndicator } from "@/components/ui/state-views";
 import { createStockAdjustmentAction } from "@/lib/services/supabase-inventory";
 import type { InventoryState } from "@/lib/types";
@@ -51,7 +53,13 @@ export function StockAdjustmentForm({ state }: { state: InventoryState }) {
   }
 
   return (
-    <Card>
+    <Dialog>
+      <DialogTrigger render={<Button variant="outline" />}>
+        <SlidersHorizontal data-icon="inline-start" aria-hidden />
+        Quick adjustment
+      </DialogTrigger>
+      <DialogContent className="max-h-[min(90svh,720px)] overflow-y-auto sm:max-w-xl">
+    <Card className="border-0 shadow-none">
       <CardHeader>
         <CardTitle className="flex items-center gap-2">
           <SlidersHorizontal aria-hidden />
@@ -66,20 +74,19 @@ export function StockAdjustmentForm({ state }: { state: InventoryState }) {
           <FieldGroup>
             <Field>
               <FieldLabel>Raw material variant</FieldLabel>
-              <Select name="itemId" defaultValue={defaultVariant}>
-                <SelectTrigger className="w-full">
-                  <SelectValue placeholder="Select material variant" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectGroup>
-                    {state.materialVariants.map((variant) => (
-                      <SelectItem key={variant.id} value={variant.id}>
-                        {variant.name}
-                      </SelectItem>
-                    ))}
-                  </SelectGroup>
-                </SelectContent>
-              </Select>
+              <EntitySelect
+                name="itemId"
+                defaultValue={defaultVariant}
+                placeholder="Select material variant"
+                items={state.materialVariants.map((variant) => {
+                  const material = state.materials.find((entry) => entry.id === variant.materialId);
+                  return {
+                    value: variant.id,
+                    label: variant.name,
+                    description: material?.name,
+                  };
+                })}
+              />
             </Field>
             <Field>
               <FieldLabel htmlFor="deltaQuantity">Adjustment quantity</FieldLabel>
@@ -106,5 +113,7 @@ export function StockAdjustmentForm({ state }: { state: InventoryState }) {
         </form>
       </CardContent>
     </Card>
+      </DialogContent>
+    </Dialog>
   );
 }

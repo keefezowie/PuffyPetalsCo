@@ -5,11 +5,13 @@ import { useMemo, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
 
+import { EntitySelect } from "@/components/forms/entity-select";
+import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { Dialog, DialogContent, DialogTrigger } from "@/components/ui/dialog";
 import { Field, FieldDescription, FieldGroup, FieldLabel } from "@/components/ui/field";
 import { Input } from "@/components/ui/input";
 import { PendingButton } from "@/components/ui/pending-button";
-import { Select, SelectContent, SelectGroup, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { RefreshingIndicator } from "@/components/ui/state-views";
 import { formatQuantity, formatRupiahDecimal } from "@/lib/formatters";
 import { recordPurchaseAction } from "@/lib/services/supabase-inventory";
@@ -85,7 +87,13 @@ export function PurchaseEntryForm({ state }: { state: InventoryState }) {
   }
 
   return (
-    <Card>
+    <Dialog>
+      <DialogTrigger render={<Button />}>
+        <PackagePlus data-icon="inline-start" aria-hidden />
+        Record purchase
+      </DialogTrigger>
+      <DialogContent className="max-h-[min(90svh,920px)] overflow-y-auto sm:max-w-2xl">
+    <Card className="border-0 shadow-none">
       <CardHeader>
         <CardTitle className="flex items-center gap-2">
           <PackagePlus aria-hidden />
@@ -100,37 +108,32 @@ export function PurchaseEntryForm({ state }: { state: InventoryState }) {
           <FieldGroup>
             <Field>
               <FieldLabel>Supplier</FieldLabel>
-              <Select name="supplierId" defaultValue={defaultSupplier}>
-                <SelectTrigger className="w-full">
-                  <SelectValue placeholder="Select supplier" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectGroup>
-                    {state.suppliers.map((supplier) => (
-                      <SelectItem key={supplier.id} value={supplier.id}>
-                        {supplier.name}
-                      </SelectItem>
-                    ))}
-                  </SelectGroup>
-                </SelectContent>
-              </Select>
+              <EntitySelect
+                name="supplierId"
+                defaultValue={defaultSupplier}
+                placeholder="Select supplier"
+                items={state.suppliers.map((supplier) => ({
+                  value: supplier.id,
+                  label: supplier.name,
+                  description: supplier.channel,
+                }))}
+              />
             </Field>
             <Field>
               <FieldLabel>Material variant</FieldLabel>
-              <Select name="materialVariantId" defaultValue={defaultVariant}>
-                <SelectTrigger className="w-full">
-                  <SelectValue placeholder="Select material" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectGroup>
-                    {state.materialVariants.map((variant) => (
-                      <SelectItem key={variant.id} value={variant.id}>
-                        {variant.name}
-                      </SelectItem>
-                    ))}
-                  </SelectGroup>
-                </SelectContent>
-              </Select>
+              <EntitySelect
+                name="materialVariantId"
+                defaultValue={defaultVariant}
+                placeholder="Select material"
+                items={state.materialVariants.map((variant) => {
+                  const material = state.materials.find((entry) => entry.id === variant.materialId);
+                  return {
+                    value: variant.id,
+                    label: variant.name,
+                    description: material?.name,
+                  };
+                })}
+              />
               <FieldDescription>
                 Default quantity added uses the selected variant estimate.
               </FieldDescription>
@@ -187,5 +190,7 @@ export function PurchaseEntryForm({ state }: { state: InventoryState }) {
         </form>
       </CardContent>
     </Card>
+      </DialogContent>
+    </Dialog>
   );
 }

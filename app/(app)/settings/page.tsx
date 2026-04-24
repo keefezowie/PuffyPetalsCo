@@ -22,11 +22,10 @@ export default async function SettingsPage() {
         title="Settings"
         description="Single-user operating assumptions for costing, stock control, and platform fees."
         eyebrow="Admin"
+        action={<SettingsUpdateForm state={state} />}
       />
 
-      <section className="grid gap-4 xl:grid-cols-[0.8fr_1.2fr]">
-        <SettingsUpdateForm state={state} />
-
+      <section>
         <Card>
           <CardHeader>
             <CardTitle>Platform Fee Rules</CardTitle>

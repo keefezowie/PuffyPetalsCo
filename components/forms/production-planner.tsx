@@ -8,12 +8,13 @@ import { useForm } from "react-hook-form";
 import { toast } from "sonner";
 import type { z } from "zod";
 
+import { EntitySelect } from "@/components/forms/entity-select";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { Dialog, DialogContent, DialogTrigger } from "@/components/ui/dialog";
 import { Field, FieldError, FieldGroup, FieldLabel } from "@/components/ui/field";
 import { Input } from "@/components/ui/input";
-import { Select, SelectContent, SelectGroup, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { RefreshingIndicator } from "@/components/ui/state-views";
 import {
   Table,
@@ -38,7 +39,7 @@ type ProductionValues = z.output<typeof productionSchema>;
 export function ProductionPlanner({ initialState }: { initialState: InventoryState }) {
   const router = useRouter();
   const [state] = useState<InventoryState>(initialState);
-  const [lastBatchId, setLastBatchId] = useState<string | null>(null);
+  const [lastBatchLabel, setLastBatchLabel] = useState<string | null>(null);
   const [isRefreshing, startRefresh] = useTransition();
   const defaultProductId = initialState.products[0]?.id ?? "";
   const form = useForm<ProductionInput, unknown, ProductionValues>({
@@ -66,14 +67,16 @@ export function ProductionPlanner({ initialState }: { initialState: InventorySta
 
   const onSubmit = form.handleSubmit(async (payload) => {
     try {
-      const batchId = await createProductionBatchAction({
+      await createProductionBatchAction({
         productId: payload.productId,
         quantityMade: payload.quantityMade,
         date: payload.date,
         notes: payload.notes,
       });
 
-      setLastBatchId(batchId);
+      setLastBatchLabel(
+        `${selectedProduct?.name ?? "Product"} · ${payload.quantityMade} pcs · ${payload.date}`,
+      );
       toast.success("Production batch saved", {
         description: `${selectedProduct?.name ?? "Product"} stock and material movements were updated.`,
       });
@@ -88,6 +91,12 @@ export function ProductionPlanner({ initialState }: { initialState: InventorySta
   });
 
   return (
+    <Dialog>
+      <DialogTrigger render={<Button />}>
+        <Factory data-icon="inline-start" aria-hidden />
+        Create batch
+      </DialogTrigger>
+      <DialogContent className="max-h-[min(90svh,920px)] overflow-y-auto sm:max-w-4xl">
     <div className="grid gap-4 xl:grid-cols-[0.85fr_1.15fr]">
       <Card>
           <CardHeader>
@@ -104,27 +113,20 @@ export function ProductionPlanner({ initialState }: { initialState: InventorySta
             <FieldGroup>
               <Field data-invalid={!!form.formState.errors.productId}>
                 <FieldLabel>Product</FieldLabel>
-                <Select
+                <EntitySelect
                   value={values.productId}
                   onValueChange={(value) => {
                     if (value) {
                       form.setValue("productId", value, { shouldValidate: true });
                     }
                   }}
-                >
-                  <SelectTrigger className="w-full">
-                    <SelectValue placeholder="Select product" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectGroup>
-                      {state.products.map((product) => (
-                        <SelectItem key={product.id} value={product.id}>
-                          {product.name}
-                        </SelectItem>
-                      ))}
-                    </SelectGroup>
-                  </SelectContent>
-                </Select>
+                  placeholder="Select product"
+                  items={state.products.map((product) => ({
+                    value: product.id,
+                    label: product.name,
+                    description: product.sku,
+                  }))}
+                />
                 <FieldError errors={[form.formState.errors.productId]} />
               </Field>
               <Field data-invalid={!!form.formState.errors.quantityMade}>
@@ -157,9 +159,9 @@ export function ProductionPlanner({ initialState }: { initialState: InventorySta
               )}
             </Button>
             <RefreshingIndicator show={isRefreshing} />
-            {lastBatchId ? (
+            {lastBatchLabel ? (
               <Badge variant="secondary" className="w-fit">
-                Last batch: {lastBatchId.slice(0, 18)}
+                Last batch: {lastBatchLabel}
               </Badge>
             ) : null}
           </form>
@@ -225,5 +227,7 @@ export function ProductionPlanner({ initialState }: { initialState: InventorySta
         </CardContent>
       </Card>
     </div>
+      </DialogContent>
+    </Dialog>
   );
 }

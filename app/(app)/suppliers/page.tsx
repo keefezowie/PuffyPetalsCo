@@ -23,16 +23,15 @@ export default async function SuppliersPage() {
         title="Suppliers"
         description="Supplier records and price history for purchase decisions."
         eyebrow="Sourcing"
+        action={<SupplierCreateForm />}
       />
-      <section className="grid gap-4 xl:grid-cols-[0.85fr_1.15fr]">
-        <SupplierCreateForm />
-        <Card>
-          <CardHeader>
-            <CardTitle>Supplier Directory</CardTitle>
-            <CardDescription>Preferred suppliers are used in restock reports.</CardDescription>
-          </CardHeader>
-          <CardContent>
-            <Table>
+      <Card>
+        <CardHeader>
+          <CardTitle>Supplier Directory</CardTitle>
+          <CardDescription>Preferred suppliers are used in restock reports.</CardDescription>
+        </CardHeader>
+        <CardContent>
+          <Table>
             <TableHeader>
               <TableRow>
                 <TableHead>Name</TableHead>
@@ -61,10 +60,9 @@ export default async function SuppliersPage() {
                 </TableRow>
               )}
             </TableBody>
-            </Table>
-          </CardContent>
-        </Card>
-      </section>
+          </Table>
+        </CardContent>
+      </Card>
 
       <Card>
         <CardHeader>

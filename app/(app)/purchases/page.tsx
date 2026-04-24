@@ -23,18 +23,16 @@ export default async function PurchasesPage() {
         title="Purchases"
         description="Record material purchases, update stock, and write immutable purchase movements."
         eyebrow="Stock intake"
+        action={<PurchaseEntryForm state={state} />}
       />
 
-      <section className="grid gap-4 xl:grid-cols-[0.85fr_1.15fr]">
-        <PurchaseEntryForm state={state} />
-
-        <Card>
-          <CardHeader>
-            <CardTitle>Recent Purchases</CardTitle>
-            <CardDescription>Purchases are separate from material master data.</CardDescription>
-          </CardHeader>
-          <CardContent>
-            <Table>
+      <Card>
+        <CardHeader>
+          <CardTitle>Recent Purchases</CardTitle>
+          <CardDescription>Purchases are separate from material master data.</CardDescription>
+        </CardHeader>
+        <CardContent>
+          <Table>
               <TableHeader>
                 <TableRow>
                   <TableHead>Date</TableHead>
@@ -65,10 +63,9 @@ export default async function PurchasesPage() {
                   </TableRow>
                 )}
               </TableBody>
-            </Table>
-          </CardContent>
-        </Card>
-      </section>
+          </Table>
+        </CardContent>
+      </Card>
     </>
   );
 }

@@ -34,21 +34,19 @@ export default async function ProductsPage() {
         title="Products"
         description="Finished goods, live manufacturing cost, margin, and recommended price."
         eyebrow="Catalog costing"
+        action={<ProductCreateForm state={state} />}
       />
-      <section className="grid gap-4 xl:grid-cols-[0.9fr_1.1fr]">
-        <ProductCreateForm state={state} />
-        <Card>
-          <CardHeader>
-            <CardTitle>Flower Products</CardTitle>
-            <CardDescription>
-              Product rows are created in Supabase and costed from their live BOM lines.
-            </CardDescription>
-          </CardHeader>
-          <CardContent>
-            <ProductsTable data={rows} />
-          </CardContent>
-        </Card>
-      </section>
+      <Card>
+        <CardHeader>
+          <CardTitle>Flower Products</CardTitle>
+          <CardDescription>
+            Product rows are created in Supabase and costed from their live BOM lines.
+          </CardDescription>
+        </CardHeader>
+        <CardContent>
+          <ProductsTable data={rows} />
+        </CardContent>
+      </Card>
     </>
   );
 }

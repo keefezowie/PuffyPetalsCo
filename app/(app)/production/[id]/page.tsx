@@ -32,8 +32,9 @@ export default async function ProductionBatchDetailPage({
   return (
     <>
       <PageHeader
-        title={`Batch ${batch.id.slice(0, 12)}`}
+        title={`${product?.name ?? "Production batch"}`}
         description={`${product?.name ?? "Product"} · ${formatDate(batch.date)} · ${formatQuantity(batch.quantityMade, "pcs")}`}
+        eyebrow="Production detail"
       />
       <Card>
         <CardHeader>
@@ -65,7 +66,7 @@ export default async function ProductionBatchDetailPage({
                 })
               ) : (
                 <TableRow>
-                  <TableCell colSpan={4}>Demo batch has no persisted detail lines yet.</TableCell>
+                  <TableCell colSpan={4}>No material detail lines are recorded for this batch.</TableCell>
                 </TableRow>
               )}
             </TableBody>
