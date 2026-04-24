@@ -132,6 +132,39 @@ describe("inventory operations", () => {
     expect(first.movements).toHaveLength(1);
     expect(() => fulfillOrder(first.state, "order-demo-001")).toThrow(/already/i);
   });
+
+  it("deducts repeated product lines as one fulfilled quantity", () => {
+    const state = getDemoInventoryState();
+    const productBefore = state.products.find((product) => product.id === "prod-cherry-blossoms")!;
+    const result = fulfillOrder(
+      {
+        ...state,
+        orderItems: [
+          ...state.orderItems,
+          {
+            id: "order-item-demo-001-extra",
+            ownerId: state.settings.ownerId,
+            orderId: "order-demo-001",
+            productId: "prod-cherry-blossoms",
+            quantity: 1,
+            unitSellingPrice: 35000,
+            discountAllocated: 0,
+            unitCost: 0,
+            lineRevenue: 35000,
+            lineCogs: 0,
+            lineGrossProfit: 0,
+            lineMargin: 0,
+          },
+        ],
+      },
+      "order-demo-001",
+    );
+    const productAfter = result.state.products.find((product) => product.id === "prod-cherry-blossoms")!;
+
+    expect(productAfter.currentStock).toBe(productBefore.currentStock - 3);
+    expect(productAfter.reservedStock).toBe(0);
+    expect(result.movements).toHaveLength(2);
+  });
 });
 
 describe("alerts and metrics", () => {

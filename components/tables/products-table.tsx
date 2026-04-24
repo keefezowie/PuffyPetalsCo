@@ -2,10 +2,14 @@
 
 import type { ColumnDef } from "@tanstack/react-table";
 import Link from "next/link";
+import type { ReactNode } from "react";
+import { useMemo } from "react";
 
+import { ProductEditForm } from "@/components/forms/master-data-forms";
 import { DataTable } from "@/components/tables/data-table";
 import { MoneyCell, QuantityCell, StatusBadge } from "@/components/ui/data-display";
 import { formatPercent, formatQuantity, formatRupiah } from "@/lib/formatters";
+import type { InventoryState } from "@/lib/types";
 
 export interface ProductRow {
   id: string;
@@ -20,12 +24,17 @@ export interface ProductRow {
   targetMargin: number;
 }
 
-const columns: ColumnDef<ProductRow>[] = [
+function centered(value: ReactNode) {
+  return <div className="flex justify-center text-center">{value}</div>;
+}
+
+function createColumns(state: InventoryState): ColumnDef<ProductRow>[] {
+  return [
   {
     accessorKey: "name",
-    header: "Product",
+    header: () => <div className="text-center">Product</div>,
     cell: ({ row }) => (
-      <div className="flex flex-col">
+      <div className="flex flex-col items-center text-center">
         <Link href={`/products/${row.original.id}`} className="font-medium hover:underline">
           {row.original.name}
         </Link>
@@ -35,18 +44,18 @@ const columns: ColumnDef<ProductRow>[] = [
   },
   {
     accessorKey: "sellingPrice",
-    header: "Selling Price",
-    cell: ({ row }) => <MoneyCell value={formatRupiah(row.original.sellingPrice)} />,
+    header: () => <div className="text-center">Selling Price</div>,
+    cell: ({ row }) => centered(<MoneyCell value={formatRupiah(row.original.sellingPrice)} />),
   },
   {
     accessorKey: "manufacturingCost",
-    header: "Cost",
-    cell: ({ row }) => <MoneyCell value={formatRupiah(row.original.manufacturingCost)} muted />,
+    header: () => <div className="text-center">Cost</div>,
+    cell: ({ row }) => centered(<MoneyCell value={formatRupiah(row.original.manufacturingCost)} muted />),
   },
   {
     accessorKey: "grossMargin",
-    header: "Margin",
-    cell: ({ row }) => (
+    header: () => <div className="text-center">Margin</div>,
+    cell: ({ row }) => centered(
       <StatusBadge
         tone={
           row.original.grossMargin < row.original.targetMargin
@@ -55,29 +64,40 @@ const columns: ColumnDef<ProductRow>[] = [
         }
       >
         {formatPercent(row.original.grossMargin)}
-      </StatusBadge>
+      </StatusBadge>,
     ),
   },
   {
     accessorKey: "recommendedPrice",
-    header: "Recommended",
-    cell: ({ row }) => <MoneyCell value={formatRupiah(row.original.recommendedPrice)} />,
+    header: () => <div className="text-center">Recommended</div>,
+    cell: ({ row }) => centered(<MoneyCell value={formatRupiah(row.original.recommendedPrice)} />),
   },
   {
     accessorKey: "currentStock",
-    header: "Stock",
-    cell: ({ row }) => (
+    header: () => <div className="text-center">Stock</div>,
+    cell: ({ row }) => centered(
       <QuantityCell
         value={`${formatQuantity(row.original.currentStock, "pcs")} (${formatQuantity(
           row.original.currentStock - row.original.reservedStock,
           "available",
         )})`}
-      />
+      />,
     ),
   },
-];
+  {
+    id: "actions",
+    header: () => <div className="text-center">Actions</div>,
+    cell: ({ row }) => {
+      const product = state.products.find((item) => item.id === row.original.id);
+      return product ? centered(<ProductEditForm state={state} product={product} />) : null;
+    },
+  },
+  ];
+}
 
-export function ProductsTable({ data }: { data: ProductRow[] }) {
+export function ProductsTable({ data, state }: { data: ProductRow[]; state: InventoryState }) {
+  const columns = useMemo(() => createColumns(state), [state]);
+
   return (
     <DataTable
       columns={columns}

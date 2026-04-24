@@ -32,13 +32,13 @@ export default async function FinishedGoodsPage() {
           <Table>
             <TableHeader>
               <TableRow>
-                <TableHead>Product</TableHead>
-                <TableHead>Current</TableHead>
-                <TableHead>Reserved</TableHead>
-                <TableHead>Available</TableHead>
-                <TableHead>Avg Cost</TableHead>
-                <TableHead>Last Cost</TableHead>
-                <TableHead>Value</TableHead>
+                <TableHead className="text-center">Product</TableHead>
+                <TableHead className="text-center">Current</TableHead>
+                <TableHead className="text-center">Reserved</TableHead>
+                <TableHead className="text-center">Available</TableHead>
+                <TableHead className="text-center">Avg Cost</TableHead>
+                <TableHead className="text-center">Last Cost</TableHead>
+                <TableHead className="text-center">Value</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
@@ -46,17 +46,17 @@ export default async function FinishedGoodsPage() {
                 const available = product.currentStock - product.reservedStock;
                 return (
                   <TableRow key={product.id}>
-                    <TableCell className="font-medium">{product.name}</TableCell>
-                    <TableCell><QuantityCell value={formatQuantity(product.currentStock, "pcs")} /></TableCell>
-                    <TableCell><QuantityCell value={formatQuantity(product.reservedStock, "pcs")} muted /></TableCell>
-                    <TableCell>
+                    <TableCell className="text-center font-medium">{product.name}</TableCell>
+                    <TableCell className="text-center"><div className="flex justify-center"><QuantityCell value={formatQuantity(product.currentStock, "pcs")} /></div></TableCell>
+                    <TableCell className="text-center"><div className="flex justify-center"><QuantityCell value={formatQuantity(product.reservedStock, "pcs")} muted /></div></TableCell>
+                    <TableCell className="text-center">
                       <StatusBadge tone={available <= 0 ? "danger" : "success"}>
                         {formatQuantity(available, "pcs")}
                       </StatusBadge>
                     </TableCell>
-                    <TableCell><MoneyCell value={formatRupiahDecimal(product.averageUnitManufacturingCost)} muted /></TableCell>
-                    <TableCell><MoneyCell value={formatRupiahDecimal(product.lastProductionCost)} muted /></TableCell>
-                    <TableCell><MoneyCell value={formatRupiah(product.currentStock * product.averageUnitManufacturingCost)} /></TableCell>
+                    <TableCell className="text-center"><div className="flex justify-center"><MoneyCell value={formatRupiahDecimal(product.averageUnitManufacturingCost)} muted /></div></TableCell>
+                    <TableCell className="text-center"><div className="flex justify-center"><MoneyCell value={formatRupiahDecimal(product.lastProductionCost)} muted /></div></TableCell>
+                    <TableCell className="text-center"><div className="flex justify-center"><MoneyCell value={formatRupiah(product.currentStock * product.averageUnitManufacturingCost)} /></div></TableCell>
                   </TableRow>
                 );
               }) : (

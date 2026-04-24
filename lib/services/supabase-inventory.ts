@@ -148,9 +148,10 @@ export async function recordPurchaseAction(input: {
   shippingCost: number;
   discount: number;
   lines: Json;
+  purchaseUrl?: string;
   notes?: string;
 }) {
-  const { supabase } = await getMutationContext();
+  const { supabase, db, user } = await getMutationContext();
   const rpc = supabase as unknown as RpcClient;
   const { data, error } = await rpc.rpc("record_purchase", {
     p_supplier_id: input.supplierId,
@@ -163,6 +164,18 @@ export async function recordPurchaseAction(input: {
 
   if (error) {
     throw new Error(error.message);
+  }
+
+  if (input.purchaseUrl && data) {
+    const { error: linkError } = await db
+      .from("purchases")
+      .update({ receipt_url: optionalText(input.purchaseUrl) })
+      .eq("id", data)
+      .eq("owner_id", user.id);
+
+    if (linkError) {
+      throw new Error(linkError.message);
+    }
   }
 
   revalidatePath("/purchases");
@@ -366,16 +379,29 @@ export async function createProductWithBomAction(input: {
   packagingCost: number;
   overheadCost: number;
   targetMargin: number;
-  materialVariantId: string;
-  quantityRequired: number;
-  wastePercentage: number;
+  materialVariantId?: string;
+  quantityRequired?: number;
+  wastePercentage?: number;
   bomNotes?: string;
+  bomLines?: Array<{
+    materialVariantId: string;
+    quantityRequired: number;
+    wastePercentage: number;
+    notes?: string;
+  }>;
 }) {
   const { db, user } = await getMutationContext();
   const name = requireText(input.name, "Product name");
   const sku = requireText(input.sku, "SKU");
   const category = requireText(input.category, "Category");
-  const materialVariantId = requireText(input.materialVariantId, "BOM material");
+  const bomLines = input.bomLines?.length
+    ? input.bomLines
+    : [{
+        materialVariantId: requireText(input.materialVariantId ?? "", "BOM material"),
+        quantityRequired: input.quantityRequired ?? 1,
+        wastePercentage: input.wastePercentage ?? 0,
+        notes: input.bomNotes,
+      }];
 
   assertNonNegative(input.sellingPrice, "Selling price");
   assertNonNegative(input.laborMinutes, "Labor minutes");
@@ -383,21 +409,12 @@ export async function createProductWithBomAction(input: {
   assertNonNegative(input.packagingCost, "Packaging cost");
   assertNonNegative(input.overheadCost, "Overhead cost");
   assertRate(input.targetMargin, "Target margin");
-  assertPositive(input.quantityRequired, "BOM quantity");
-  assertNonNegative(input.wastePercentage, "Waste percentage");
-
-  const { data: variantData, error: variantError } = await db
-    .from("material_variants")
-    .select("usage_unit,cost_per_usage_unit")
-    .eq("id", materialVariantId)
-    .eq("owner_id", user.id)
-    .single();
-
-  if (variantError) {
-    throw new Error(variantError.message);
+  for (const [index, line] of bomLines.entries()) {
+    requireText(line.materialVariantId, `BOM line ${index + 1} material`);
+    assertPositive(line.quantityRequired, `BOM line ${index + 1} quantity`);
+    assertNonNegative(line.wastePercentage, `BOM line ${index + 1} waste percentage`);
   }
 
-  const variant = variantData as { usage_unit: Unit; cost_per_usage_unit: number };
   const { data: productData, error: productError } = await db
     .from("products")
     .insert({
@@ -425,28 +442,165 @@ export async function createProductWithBomAction(input: {
   }
 
   const productId = (productData as { id: string }).id;
-  const { error: bomError } = await db
-    .from("product_bom_lines")
-    .insert({
+  const bomRows = [];
+  for (const line of bomLines) {
+    const { data: variantData, error: variantError } = await db
+      .from("material_variants")
+      .select("usage_unit,cost_per_usage_unit")
+      .eq("id", line.materialVariantId)
+      .eq("owner_id", user.id)
+      .single();
+
+    if (variantError) {
+      throw new Error(variantError.message);
+    }
+
+    const variant = variantData as { usage_unit: Unit; cost_per_usage_unit: number };
+    bomRows.push({
       owner_id: user.id,
       product_id: productId,
-      material_variant_id: materialVariantId,
-      quantity_required: input.quantityRequired,
+      material_variant_id: line.materialVariantId,
+      quantity_required: line.quantityRequired,
       usage_unit: variant.usage_unit,
-      waste_percentage: input.wastePercentage,
+      waste_percentage: line.wastePercentage,
       unit_cost_snapshot: Number(variant.cost_per_usage_unit),
       optional: false,
       active: true,
-      notes: optionalText(input.bomNotes),
-    })
-    .select("id")
-    .single();
+      notes: optionalText(line.notes),
+    });
+  }
 
-  if (bomError) {
-    throw new Error(bomError.message);
+  for (const row of bomRows) {
+    const { error: bomError } = await db
+      .from("product_bom_lines")
+      .insert(row)
+      .select("id")
+      .single();
+
+    if (bomError) {
+      throw new Error(bomError.message);
+    }
   }
 
   revalidatePath("/products");
+  revalidatePath("/production");
+  revalidatePath("/finished-goods");
+  revalidatePath("/dashboard");
+  return productId;
+}
+
+export async function updateProductAction(input: {
+  productId: string;
+  name: string;
+  sku: string;
+  category: string;
+  sellingPrice: number;
+  laborMinutes: number;
+  laborRatePerHour: number;
+  packagingCost: number;
+  overheadCost: number;
+  targetMargin: number;
+  bomLines: Array<{
+    materialVariantId: string;
+    quantityRequired: number;
+    wastePercentage: number;
+    notes?: string;
+  }>;
+}) {
+  const { db, user } = await getMutationContext();
+  const productId = requireText(input.productId, "Product");
+  const name = requireText(input.name, "Product name");
+  const sku = requireText(input.sku, "SKU");
+  const category = requireText(input.category, "Category");
+
+  assertNonNegative(input.sellingPrice, "Selling price");
+  assertNonNegative(input.laborMinutes, "Labor minutes");
+  assertNonNegative(input.laborRatePerHour, "Labor rate");
+  assertNonNegative(input.packagingCost, "Packaging cost");
+  assertNonNegative(input.overheadCost, "Overhead cost");
+  assertRate(input.targetMargin, "Target margin");
+  if (!input.bomLines.length) {
+    throw new Error("Product must include at least one BOM line.");
+  }
+
+  for (const [index, line] of input.bomLines.entries()) {
+    requireText(line.materialVariantId, `BOM line ${index + 1} material`);
+    assertPositive(line.quantityRequired, `BOM line ${index + 1} quantity`);
+    assertNonNegative(line.wastePercentage, `BOM line ${index + 1} waste percentage`);
+  }
+
+  const { error: productError } = await db
+    .from("products")
+    .update({
+      name,
+      sku,
+      category,
+      selling_price: Math.round(input.sellingPrice),
+      labor_minutes: input.laborMinutes,
+      labor_rate_per_hour: Math.round(input.laborRatePerHour),
+      packaging_cost: Math.round(input.packagingCost),
+      overhead_cost: Math.round(input.overheadCost),
+      target_margin: input.targetMargin,
+    })
+    .eq("id", productId)
+    .eq("owner_id", user.id);
+
+  if (productError) {
+    throw new Error(productError.message);
+  }
+
+  const { error: deactivateError } = await db
+    .from("product_bom_lines")
+    .update({ active: false })
+    .eq("product_id", productId)
+    .eq("owner_id", user.id);
+
+  if (deactivateError) {
+    throw new Error(deactivateError.message);
+  }
+
+  const bomRows = [];
+  for (const line of input.bomLines) {
+    const { data: variantData, error: variantError } = await db
+      .from("material_variants")
+      .select("usage_unit,cost_per_usage_unit")
+      .eq("id", line.materialVariantId)
+      .eq("owner_id", user.id)
+      .single();
+
+    if (variantError) {
+      throw new Error(variantError.message);
+    }
+
+    const variant = variantData as { usage_unit: Unit; cost_per_usage_unit: number };
+    bomRows.push({
+      owner_id: user.id,
+      product_id: productId,
+      material_variant_id: line.materialVariantId,
+      quantity_required: line.quantityRequired,
+      usage_unit: variant.usage_unit,
+      waste_percentage: line.wastePercentage,
+      unit_cost_snapshot: Number(variant.cost_per_usage_unit),
+      optional: false,
+      active: true,
+      notes: optionalText(line.notes),
+    });
+  }
+
+  for (const row of bomRows) {
+    const { error: bomError } = await db
+      .from("product_bom_lines")
+      .insert(row)
+      .select("id")
+      .single();
+
+    if (bomError) {
+      throw new Error(bomError.message);
+    }
+  }
+
+  revalidatePath("/products");
+  revalidatePath(`/products/${productId}`);
   revalidatePath("/production");
   revalidatePath("/finished-goods");
   revalidatePath("/dashboard");
@@ -460,57 +614,92 @@ export async function createOrderAction(input: {
   platform: SalesPlatform;
   status: OrderStatus;
   paymentStatus: PaymentStatus;
-  productId: string;
-  quantity: number;
-  unitSellingPrice: number;
+  productId?: string;
+  quantity?: number;
+  unitSellingPrice?: number;
   discount: number;
   shippingFeeCharged: number;
   shippingCostPaid: number;
   platformFee: number;
   packagingCost: number;
   notes?: string;
+  items?: Array<{
+    productId: string;
+    quantity: number;
+    unitSellingPrice: number;
+    discountAllocated?: number;
+  }>;
 }) {
   const { db, user } = await getMutationContext();
   const orderNumber = requireText(input.orderNumber, "Order number");
   const customerName = requireText(input.customerName, "Customer name");
-  const productId = requireText(input.productId, "Product");
+  const orderItems = input.items?.length
+    ? input.items
+    : [{
+        productId: requireText(input.productId ?? "", "Product"),
+        quantity: input.quantity ?? 1,
+        unitSellingPrice: input.unitSellingPrice ?? 0,
+        discountAllocated: input.discount,
+      }];
 
-  assertPositive(input.quantity, "Quantity");
-  assertNonNegative(input.unitSellingPrice, "Unit selling price");
+  for (const [index, item] of orderItems.entries()) {
+    requireText(item.productId, `Order line ${index + 1} product`);
+    assertPositive(item.quantity, `Order line ${index + 1} quantity`);
+    assertNonNegative(item.unitSellingPrice, `Order line ${index + 1} unit selling price`);
+    assertNonNegative(item.discountAllocated ?? 0, `Order line ${index + 1} discount`);
+  }
   assertNonNegative(input.discount, "Discount");
   assertNonNegative(input.shippingFeeCharged, "Shipping fee charged");
   assertNonNegative(input.shippingCostPaid, "Shipping cost paid");
   assertNonNegative(input.platformFee, "Platform fee");
   assertNonNegative(input.packagingCost, "Packaging cost");
 
-  const { data: productData, error: productError } = await db
-    .from("products")
-    .select("selling_price,average_unit_manufacturing_cost,last_production_cost,reserved_stock")
-    .eq("id", productId)
-    .eq("owner_id", user.id)
-    .single();
+  const preparedItems = [];
+  for (const item of orderItems) {
+    const { data: productData, error: productError } = await db
+      .from("products")
+      .select("selling_price,average_unit_manufacturing_cost,last_production_cost,reserved_stock")
+      .eq("id", item.productId)
+      .eq("owner_id", user.id)
+      .single();
 
-  if (productError) {
-    throw new Error(productError.message);
+    if (productError) {
+      throw new Error(productError.message);
+    }
+
+    const product = productData as {
+      selling_price: number;
+      average_unit_manufacturing_cost: number;
+      last_production_cost: number;
+      reserved_stock: number;
+    };
+    const unitSellingPrice = item.unitSellingPrice || product.selling_price;
+    const discountAllocated = item.discountAllocated ?? 0;
+    const lineRevenue = Math.round(item.quantity * unitSellingPrice) - discountAllocated;
+    const unitCost =
+      Number(product.average_unit_manufacturing_cost) || Number(product.last_production_cost) || 0;
+    const lineCogs = item.quantity * unitCost;
+    const lineGrossProfit = lineRevenue - lineCogs;
+    preparedItems.push({
+      productId: item.productId,
+      quantity: item.quantity,
+      unitSellingPrice,
+      discountAllocated,
+      unitCost,
+      lineRevenue,
+      lineCogs,
+      lineGrossProfit,
+      lineMargin: lineRevenue > 0 ? lineGrossProfit / lineRevenue : 0,
+      reservedStock: Number(product.reserved_stock),
+    });
   }
 
-  const product = productData as {
-    selling_price: number;
-    average_unit_manufacturing_cost: number;
-    last_production_cost: number;
-    reserved_stock: number;
-  };
-  const unitSellingPrice = input.unitSellingPrice || product.selling_price;
-  const lineRevenue = Math.round(input.quantity * unitSellingPrice) - input.discount;
-  const unitCost =
-    Number(product.average_unit_manufacturing_cost) || Number(product.last_production_cost) || 0;
-  const lineCogs = input.quantity * unitCost;
-  const grossProfit = lineRevenue - lineCogs;
-  const lineMargin = lineRevenue > 0 ? grossProfit / lineRevenue : 0;
-  const netRevenue =
-    lineRevenue - input.platformFee + input.shippingFeeCharged;
+  const subtotal = preparedItems.reduce((sum, item) => sum + item.lineRevenue, 0);
+  const cogs = preparedItems.reduce((sum, item) => sum + item.lineCogs, 0);
+  const grossProfit = subtotal - cogs;
+  const netRevenue = subtotal - input.platformFee + input.shippingFeeCharged;
   const netProfit =
-    netRevenue - lineCogs - input.shippingCostPaid - input.packagingCost;
+    netRevenue - cogs - input.shippingCostPaid - input.packagingCost;
 
   const { data: orderData, error: orderError } = await db
     .from("orders")
@@ -523,14 +712,14 @@ export async function createOrderAction(input: {
       status: input.status,
       payment_status: input.paymentStatus,
       fulfillment_status: input.status === "confirmed" ? "reserved" : "unfulfilled",
-      subtotal: lineRevenue,
-      discount: 0,
+      subtotal,
+      discount: input.discount,
       shipping_fee_charged: input.shippingFeeCharged,
       shipping_cost_paid: input.shippingCostPaid,
       platform_fee: input.platformFee,
       packaging_cost: input.packagingCost,
       net_revenue: netRevenue,
-      cogs: lineCogs,
+      cogs,
       gross_profit: grossProfit,
       net_profit: netProfit,
       stock_deducted: false,
@@ -544,39 +733,49 @@ export async function createOrderAction(input: {
   }
 
   const orderId = (orderData as { id: string }).id;
-  const { error: itemError } = await db
-    .from("order_items")
-    .insert({
-      owner_id: user.id,
-      order_id: orderId,
-      product_id: productId,
-      quantity: input.quantity,
-      unit_selling_price: Math.round(unitSellingPrice),
-      discount_allocated: input.discount,
-      unit_cost: unitCost,
-      line_revenue: lineRevenue,
-      line_cogs: lineCogs,
-      line_gross_profit: grossProfit,
-      line_margin: lineMargin,
-    })
-    .select("id")
-    .single();
+  for (const item of preparedItems) {
+    const { error: itemError } = await db
+      .from("order_items")
+      .insert({
+        owner_id: user.id,
+        order_id: orderId,
+        product_id: item.productId,
+        quantity: item.quantity,
+        unit_selling_price: Math.round(item.unitSellingPrice),
+        discount_allocated: item.discountAllocated,
+        unit_cost: item.unitCost,
+        line_revenue: item.lineRevenue,
+        line_cogs: item.lineCogs,
+        line_gross_profit: item.lineGrossProfit,
+        line_margin: item.lineMargin,
+      })
+      .select("id")
+      .single();
 
-  if (itemError) {
-    throw new Error(itemError.message);
+    if (itemError) {
+      throw new Error(itemError.message);
+    }
   }
 
   if (input.status === "confirmed") {
-    const { error: reserveError } = await db
-      .from("products")
-      .update({
-        reserved_stock: Number(product.reserved_stock) + input.quantity,
-      })
-      .eq("id", productId)
-      .eq("owner_id", user.id);
+    const reservationByProduct = preparedItems.reduce<Record<string, number>>((acc, item) => {
+      acc[item.productId] = (acc[item.productId] ?? 0) + item.quantity;
+      return acc;
+    }, {});
 
-    if (reserveError) {
-      throw new Error(reserveError.message);
+    for (const [productId, quantity] of Object.entries(reservationByProduct)) {
+      const reservedStock = preparedItems.find((item) => item.productId === productId)?.reservedStock ?? 0;
+      const { error: reserveError } = await db
+        .from("products")
+        .update({
+          reserved_stock: reservedStock + quantity,
+        })
+        .eq("id", productId)
+        .eq("owner_id", user.id);
+
+      if (reserveError) {
+        throw new Error(reserveError.message);
+      }
     }
   }
 

@@ -560,13 +560,17 @@ export function fulfillOrder(state: InventoryState, orderId: string) {
     netProfit,
     stockDeducted: true,
   };
+  const soldByProduct = updatedItems.reduce<Record<string, number>>((acc, item) => {
+    acc[item.productId] = (acc[item.productId] ?? 0) + item.quantity;
+    return acc;
+  }, {});
   const products = state.products.map((product) => {
-    const item = updatedItems.find((line) => line.productId === product.id);
-    return item
+    const quantitySold = soldByProduct[product.id] ?? 0;
+    return quantitySold
       ? {
           ...product,
-          currentStock: product.currentStock - item.quantity,
-          reservedStock: Math.max(0, product.reservedStock - item.quantity),
+          currentStock: product.currentStock - quantitySold,
+          reservedStock: Math.max(0, product.reservedStock - quantitySold),
         }
       : product;
   });

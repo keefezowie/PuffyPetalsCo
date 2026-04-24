@@ -3,13 +3,15 @@
 import {
   Boxes,
   Flower2,
+  Pencil,
   Plus,
   Settings2,
   ShoppingBag,
   Store,
+  Trash2,
 } from "lucide-react";
 import { useRouter } from "next/navigation";
-import { useTransition } from "react";
+import { useState, useTransition } from "react";
 import { toast } from "sonner";
 
 import { EntitySelect } from "@/components/forms/entity-select";
@@ -30,6 +32,7 @@ import {
   createOrderAction,
   createProductWithBomAction,
   createSupplierAction,
+  updateProductAction,
   updateSettingsAction,
 } from "@/lib/services/supabase-inventory";
 import type {
@@ -37,6 +40,8 @@ import type {
   MaterialCategory,
   OrderStatus,
   PaymentStatus,
+  Product,
+  ProductBomLine,
   SalesPlatform,
   Unit,
 } from "@/lib/types";
@@ -67,6 +72,31 @@ function asNumber(formData: FormData, name: string, fallback = 0) {
 
 function asString(formData: FormData, name: string, fallback = "") {
   return String(formData.get(name) ?? fallback);
+}
+
+function parseLineKeys(formData: FormData, name: string) {
+  return asString(formData, name)
+    .split(",")
+    .map((key) => key.trim())
+    .filter(Boolean);
+}
+
+function parseBomLines(formData: FormData) {
+  return parseLineKeys(formData, "bomLineKeys").map((key) => ({
+    materialVariantId: asString(formData, `bomMaterialVariantId-${key}`),
+    quantityRequired: asNumber(formData, `bomQuantityRequired-${key}`, 1),
+    wastePercentage: asNumber(formData, `bomWastePercentage-${key}`, 0),
+    notes: asString(formData, `bomNotes-${key}`),
+  }));
+}
+
+function parseOrderItems(formData: FormData) {
+  return parseLineKeys(formData, "orderLineKeys").map((key) => ({
+    productId: asString(formData, `orderProductId-${key}`),
+    quantity: asNumber(formData, `orderQuantity-${key}`, 1),
+    unitSellingPrice: asNumber(formData, `orderUnitSellingPrice-${key}`, 0),
+    discountAllocated: asNumber(formData, `orderDiscountAllocated-${key}`, 0),
+  }));
 }
 
 function useRefreshToast() {
@@ -100,6 +130,202 @@ function FormDialog({
         {children}
       </DialogContent>
     </Dialog>
+  );
+}
+
+function materialVariantItems(state: InventoryState) {
+  return state.materialVariants.map((variant) => {
+    const material = state.materials.find((entry) => entry.id === variant.materialId);
+    return {
+      value: variant.id,
+      label: variant.name,
+      description: material?.name,
+    };
+  });
+}
+
+function BomLinesEditor({
+  state,
+  initialLines,
+}: {
+  state: InventoryState;
+  initialLines?: Array<{
+    key?: string;
+    materialVariantId?: string;
+    quantityRequired?: number;
+    wastePercentage?: number;
+    notes?: string;
+  }>;
+}) {
+  const defaultVariant = state.materialVariants[0]?.id ?? "";
+  const [rows, setRows] = useState(() =>
+    initialLines?.length
+      ? initialLines.map((line, index) => ({
+          key: line.key ?? String(index + 1),
+          materialVariantId: line.materialVariantId ?? defaultVariant,
+          quantityRequired: line.quantityRequired ?? 1,
+          wastePercentage: line.wastePercentage ?? 0,
+          notes: line.notes ?? "",
+        }))
+      : [{
+          key: "1",
+          materialVariantId: defaultVariant,
+          quantityRequired: 1,
+          wastePercentage: 0,
+          notes: "",
+        }],
+  );
+  const items = materialVariantItems(state);
+
+  return (
+    <div className="flex flex-col gap-3">
+      <input type="hidden" name="bomLineKeys" value={rows.map((row) => row.key).join(",")} />
+      <div className="flex items-center justify-between gap-3">
+        <FieldLabel>BOM materials</FieldLabel>
+        <Button
+          type="button"
+          variant="outline"
+          size="sm"
+          onClick={() => {
+            setRows((current) => [
+              ...current,
+              {
+                key: crypto.randomUUID(),
+                materialVariantId: defaultVariant,
+                quantityRequired: 1,
+                wastePercentage: 0,
+                notes: "",
+              },
+            ]);
+          }}
+          disabled={!defaultVariant}
+        >
+          <Plus data-icon="inline-start" aria-hidden />
+          Add material
+        </Button>
+      </div>
+      {rows.map((row, index) => (
+        <div key={row.key} className="rounded-lg border bg-muted/20 p-3">
+          <div className="mb-3 flex items-center justify-between gap-3">
+            <div className="text-sm font-medium">Material {index + 1}</div>
+            <Button
+              type="button"
+              variant="ghost"
+              size="icon-sm"
+              aria-label={`Remove material ${index + 1}`}
+              disabled={rows.length === 1}
+              onClick={() => setRows((current) => current.filter((entry) => entry.key !== row.key))}
+            >
+              <Trash2 aria-hidden />
+            </Button>
+          </div>
+          <div className="grid gap-3 sm:grid-cols-2">
+            <Field className="sm:col-span-2">
+              <FieldLabel>Material variant</FieldLabel>
+              <EntitySelect
+                name={`bomMaterialVariantId-${row.key}`}
+                defaultValue={row.materialVariantId}
+                placeholder="Select material"
+                items={items}
+              />
+            </Field>
+            <Field>
+              <FieldLabel htmlFor={`bom-quantity-${row.key}`}>Quantity required</FieldLabel>
+              <Input id={`bom-quantity-${row.key}`} name={`bomQuantityRequired-${row.key}`} type="number" step="0.0001" defaultValue={row.quantityRequired} required />
+            </Field>
+            <Field>
+              <FieldLabel htmlFor={`bom-waste-${row.key}`}>Waste percentage</FieldLabel>
+              <Input id={`bom-waste-${row.key}`} name={`bomWastePercentage-${row.key}`} type="number" step="0.0001" defaultValue={row.wastePercentage} required />
+            </Field>
+            <Field className="sm:col-span-2">
+              <FieldLabel htmlFor={`bom-notes-${row.key}`}>Line notes</FieldLabel>
+              <Input id={`bom-notes-${row.key}`} name={`bomNotes-${row.key}`} defaultValue={row.notes} />
+            </Field>
+          </div>
+        </div>
+      ))}
+    </div>
+  );
+}
+
+function OrderLinesEditor({ state }: { state: InventoryState }) {
+  const defaultProduct = state.products[0];
+  const [rows, setRows] = useState(() => [{
+    key: "1",
+    productId: defaultProduct?.id ?? "",
+    unitSellingPrice: defaultProduct?.sellingPrice ?? 0,
+  }]);
+
+  return (
+    <div className="flex flex-col gap-3">
+      <input type="hidden" name="orderLineKeys" value={rows.map((row) => row.key).join(",")} />
+      <div className="flex items-center justify-between gap-3">
+        <FieldLabel>Order products</FieldLabel>
+        <Button
+          type="button"
+          variant="outline"
+          size="sm"
+          disabled={!defaultProduct}
+          onClick={() => {
+            setRows((current) => [
+              ...current,
+              {
+                key: crypto.randomUUID(),
+                productId: defaultProduct?.id ?? "",
+                unitSellingPrice: defaultProduct?.sellingPrice ?? 0,
+              },
+            ]);
+          }}
+        >
+          <Plus data-icon="inline-start" aria-hidden />
+          Add product
+        </Button>
+      </div>
+      {rows.map((row, index) => (
+        <div key={row.key} className="rounded-lg border bg-muted/20 p-3">
+          <div className="mb-3 flex items-center justify-between gap-3">
+            <div className="text-sm font-medium">Product {index + 1}</div>
+            <Button
+              type="button"
+              variant="ghost"
+              size="icon-sm"
+              aria-label={`Remove product ${index + 1}`}
+              disabled={rows.length === 1}
+              onClick={() => setRows((current) => current.filter((entry) => entry.key !== row.key))}
+            >
+              <Trash2 aria-hidden />
+            </Button>
+          </div>
+          <div className="grid gap-3 sm:grid-cols-2">
+            <Field className="sm:col-span-2">
+              <FieldLabel>Product</FieldLabel>
+              <EntitySelect
+                name={`orderProductId-${row.key}`}
+                defaultValue={row.productId}
+                placeholder="Select product"
+                items={state.products.map((product) => ({
+                  value: product.id,
+                  label: product.name,
+                  description: product.sku,
+                }))}
+              />
+            </Field>
+            <Field>
+              <FieldLabel htmlFor={`order-quantity-${row.key}`}>Quantity</FieldLabel>
+              <Input id={`order-quantity-${row.key}`} name={`orderQuantity-${row.key}`} type="number" step="0.0001" defaultValue="1" required />
+            </Field>
+            <Field>
+              <FieldLabel htmlFor={`unit-selling-price-${row.key}`}>Unit selling price</FieldLabel>
+              <Input id={`unit-selling-price-${row.key}`} name={`orderUnitSellingPrice-${row.key}`} type="number" defaultValue={row.unitSellingPrice} required />
+            </Field>
+            <Field className="sm:col-span-2">
+              <FieldLabel htmlFor={`line-discount-${row.key}`}>Line discount</FieldLabel>
+              <Input id={`line-discount-${row.key}`} name={`orderDiscountAllocated-${row.key}`} type="number" defaultValue="0" required />
+            </Field>
+          </div>
+        </div>
+      ))}
+    </div>
   );
 }
 
@@ -373,7 +599,6 @@ export function MaterialCreateForm({ state }: { state: InventoryState }) {
 
 export function ProductCreateForm({ state }: { state: InventoryState }) {
   const { isRefreshing, refresh } = useRefreshToast();
-  const defaultVariant = state.materialVariants[0]?.id ?? "";
 
   async function action(formData: FormData) {
     try {
@@ -387,13 +612,10 @@ export function ProductCreateForm({ state }: { state: InventoryState }) {
         packagingCost: asNumber(formData, "packagingCost", 0),
         overheadCost: asNumber(formData, "overheadCost", 0),
         targetMargin: asNumber(formData, "targetMargin", state.settings.targetMargin),
-        materialVariantId: asString(formData, "materialVariantId"),
-        quantityRequired: asNumber(formData, "quantityRequired", 1),
-        wastePercentage: asNumber(formData, "wastePercentage", 0),
-        bomNotes: asString(formData, "bomNotes"),
+        bomLines: parseBomLines(formData),
       });
       toast.success("Product saved", {
-        description: "Product and first BOM line were added to the database.",
+        description: "Product and BOM materials were added to the database.",
       });
       refresh();
     } catch (error) {
@@ -411,7 +633,7 @@ export function ProductCreateForm({ state }: { state: InventoryState }) {
           <Flower2 aria-hidden />
           Add Product
         </CardTitle>
-        <CardDescription>Create a finished good with its first bill-of-materials line.</CardDescription>
+        <CardDescription>Create a finished good with one or more bill-of-materials lines.</CardDescription>
       </CardHeader>
       <CardContent>
         <form action={action} className="flex flex-col gap-5" aria-busy={isRefreshing}>
@@ -458,38 +680,9 @@ export function ProductCreateForm({ state }: { state: InventoryState }) {
               <FieldLabel htmlFor="overhead-cost">Overhead cost</FieldLabel>
               <Input id="overhead-cost" name="overheadCost" type="number" defaultValue="0" required />
             </Field>
-            <Field>
-              <FieldLabel>BOM material</FieldLabel>
-              <EntitySelect
-                name="materialVariantId"
-                defaultValue={defaultVariant}
-                placeholder="Select material"
-                items={state.materialVariants.map((variant) => {
-                  const material = state.materials.find((entry) => entry.id === variant.materialId);
-                  return {
-                    value: variant.id,
-                    label: variant.name,
-                    description: material?.name,
-                  };
-                })}
-              />
-            </Field>
-            <div className="grid gap-3 sm:grid-cols-2">
-              <Field>
-                <FieldLabel htmlFor="bom-quantity">Quantity required</FieldLabel>
-                <Input id="bom-quantity" name="quantityRequired" type="number" step="0.0001" defaultValue="1" required />
-              </Field>
-              <Field>
-                <FieldLabel htmlFor="bom-waste">Waste percentage</FieldLabel>
-                <Input id="bom-waste" name="wastePercentage" type="number" step="0.0001" defaultValue="0" required />
-              </Field>
-            </div>
-            <Field>
-              <FieldLabel htmlFor="bom-notes">BOM notes</FieldLabel>
-              <Input id="bom-notes" name="bomNotes" />
-            </Field>
+            <BomLinesEditor state={state} />
           </FieldGroup>
-          <PendingButton type="submit" disabled={!defaultVariant} pendingText="Saving product...">
+          <PendingButton type="submit" disabled={!state.materialVariants.length} pendingText="Saving product...">
             Save product
           </PendingButton>
           <RefreshingIndicator show={isRefreshing} />
@@ -500,12 +693,131 @@ export function ProductCreateForm({ state }: { state: InventoryState }) {
   );
 }
 
+export function ProductEditForm({
+  state,
+  product,
+}: {
+  state: InventoryState;
+  product: Product;
+}) {
+  const { isRefreshing, refresh } = useRefreshToast();
+  const activeBomLines = state.bomLines.filter((line) => line.productId === product.id && line.active);
+
+  async function action(formData: FormData) {
+    try {
+      await updateProductAction({
+        productId: product.id,
+        name: asString(formData, "name"),
+        sku: asString(formData, "sku"),
+        category: asString(formData, "category", "Flower"),
+        sellingPrice: asNumber(formData, "sellingPrice", product.sellingPrice),
+        laborMinutes: asNumber(formData, "laborMinutes", product.laborMinutes),
+        laborRatePerHour: asNumber(formData, "laborRatePerHour", product.laborRatePerHour),
+        packagingCost: asNumber(formData, "packagingCost", product.packagingCost),
+        overheadCost: asNumber(formData, "overheadCost", product.overheadCost),
+        targetMargin: asNumber(formData, "targetMargin", product.targetMargin),
+        bomLines: parseBomLines(formData),
+      });
+      toast.success("Product updated", {
+        description: "Product information and active BOM materials were refreshed.",
+      });
+      refresh();
+    } catch (error) {
+      toast.error("Product update failed", {
+        description: error instanceof Error ? error.message : "Unknown product update error.",
+      });
+    }
+  }
+
+  return (
+    <Dialog>
+      <DialogTrigger render={<Button variant="outline" size="sm" />}>
+        <Pencil data-icon="inline-start" aria-hidden />
+        Edit
+      </DialogTrigger>
+      <DialogContent className="max-h-[min(90svh,920px)] overflow-y-auto sm:max-w-2xl">
+        <Card className="border-0 shadow-none">
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <Flower2 aria-hidden />
+              Edit Product
+            </CardTitle>
+            <CardDescription>Update catalog information and replace the active BOM set.</CardDescription>
+          </CardHeader>
+          <CardContent>
+            <form action={action} className="flex flex-col gap-5" aria-busy={isRefreshing}>
+              <FieldGroup>
+                <div className="grid gap-3 sm:grid-cols-2">
+                  <Field>
+                    <FieldLabel htmlFor={`edit-product-name-${product.id}`}>Name</FieldLabel>
+                    <Input id={`edit-product-name-${product.id}`} name="name" defaultValue={product.name} required />
+                  </Field>
+                  <Field>
+                    <FieldLabel htmlFor={`edit-product-sku-${product.id}`}>SKU</FieldLabel>
+                    <Input id={`edit-product-sku-${product.id}`} name="sku" defaultValue={product.sku} required />
+                  </Field>
+                </div>
+                <Field>
+                  <FieldLabel htmlFor={`edit-product-category-${product.id}`}>Category</FieldLabel>
+                  <Input id={`edit-product-category-${product.id}`} name="category" defaultValue={product.category} required />
+                </Field>
+                <div className="grid gap-3 sm:grid-cols-2">
+                  <Field>
+                    <FieldLabel htmlFor={`edit-selling-price-${product.id}`}>Selling price</FieldLabel>
+                    <Input id={`edit-selling-price-${product.id}`} name="sellingPrice" type="number" defaultValue={product.sellingPrice} required />
+                  </Field>
+                  <Field>
+                    <FieldLabel htmlFor={`edit-target-margin-${product.id}`}>Target margin</FieldLabel>
+                    <Input id={`edit-target-margin-${product.id}`} name="targetMargin" type="number" step="0.0001" defaultValue={product.targetMargin} required />
+                  </Field>
+                </div>
+                <div className="grid gap-3 sm:grid-cols-3">
+                  <Field>
+                    <FieldLabel htmlFor={`edit-labor-minutes-${product.id}`}>Labor minutes</FieldLabel>
+                    <Input id={`edit-labor-minutes-${product.id}`} name="laborMinutes" type="number" step="0.01" defaultValue={product.laborMinutes} required />
+                  </Field>
+                  <Field>
+                    <FieldLabel htmlFor={`edit-labor-rate-${product.id}`}>Labor rate/hour</FieldLabel>
+                    <Input id={`edit-labor-rate-${product.id}`} name="laborRatePerHour" type="number" defaultValue={product.laborRatePerHour} required />
+                  </Field>
+                  <Field>
+                    <FieldLabel htmlFor={`edit-packaging-cost-${product.id}`}>Packaging cost</FieldLabel>
+                    <Input id={`edit-packaging-cost-${product.id}`} name="packagingCost" type="number" defaultValue={product.packagingCost} required />
+                  </Field>
+                </div>
+                <Field>
+                  <FieldLabel htmlFor={`edit-overhead-cost-${product.id}`}>Overhead cost</FieldLabel>
+                  <Input id={`edit-overhead-cost-${product.id}`} name="overheadCost" type="number" defaultValue={product.overheadCost} required />
+                </Field>
+                <BomLinesEditor
+                  state={state}
+                  initialLines={activeBomLines.map((line: ProductBomLine, index) => ({
+                    key: line.id || String(index + 1),
+                    materialVariantId: line.materialVariantId,
+                    quantityRequired: line.quantityRequired,
+                    wastePercentage: line.wastePercentage,
+                    notes: line.notes,
+                  }))}
+                />
+              </FieldGroup>
+              <PendingButton type="submit" disabled={!state.materialVariants.length} pendingText="Saving product...">
+                Save product
+              </PendingButton>
+              <RefreshingIndicator show={isRefreshing} />
+            </form>
+          </CardContent>
+        </Card>
+      </DialogContent>
+    </Dialog>
+  );
+}
+
 export function OrderCreateForm({ state }: { state: InventoryState }) {
   const { isRefreshing, refresh } = useRefreshToast();
-  const defaultProduct = state.products[0];
   const defaultRule = state.platformFeeRules[0];
 
   async function action(formData: FormData) {
+    const items = parseOrderItems(formData);
     try {
       await createOrderAction({
         orderNumber: asString(formData, "orderNumber"),
@@ -514,18 +826,16 @@ export function OrderCreateForm({ state }: { state: InventoryState }) {
         platform: asString(formData, "platform", "Other") as SalesPlatform,
         status: asString(formData, "status", "confirmed") as OrderStatus,
         paymentStatus: asString(formData, "paymentStatus", "paid") as PaymentStatus,
-        productId: asString(formData, "productId"),
-        quantity: asNumber(formData, "quantity", 1),
-        unitSellingPrice: asNumber(formData, "unitSellingPrice", defaultProduct?.sellingPrice ?? 0),
+        items,
         discount: asNumber(formData, "discount", 0),
         shippingFeeCharged: asNumber(formData, "shippingFeeCharged", 0),
         shippingCostPaid: asNumber(formData, "shippingCostPaid", 0),
         platformFee: asNumber(formData, "platformFee", defaultRule?.fixedFee ?? 0),
-        packagingCost: asNumber(formData, "packagingCost", defaultProduct?.packagingCost ?? 0),
+        packagingCost: asNumber(formData, "packagingCost", 0),
         notes: asString(formData, "notes"),
       });
       toast.success("Order saved", {
-        description: "Order header, item, revenue, and reservation state were saved.",
+        description: "Order header, product lines, revenue, and reservation state were saved.",
       });
       refresh();
     } catch (error) {
@@ -543,7 +853,7 @@ export function OrderCreateForm({ state }: { state: InventoryState }) {
           <ShoppingBag aria-hidden />
           Add Order
         </CardTitle>
-        <CardDescription>Record a customer order with one product line and calculated totals.</CardDescription>
+        <CardDescription>Record a customer order with one or more product lines and calculated totals.</CardDescription>
       </CardHeader>
       <CardContent>
         <form action={action} className="flex flex-col gap-5" aria-busy={isRefreshing}>
@@ -609,32 +919,10 @@ export function OrderCreateForm({ state }: { state: InventoryState }) {
                 </Select>
               </Field>
             </div>
-            <Field>
-              <FieldLabel>Product</FieldLabel>
-              <EntitySelect
-                name="productId"
-                defaultValue={defaultProduct?.id ?? ""}
-                placeholder="Select product"
-                items={state.products.map((product) => ({
-                  value: product.id,
-                  label: product.name,
-                  description: product.sku,
-                }))}
-              />
-            </Field>
+            <OrderLinesEditor state={state} />
             <div className="grid gap-3 sm:grid-cols-2">
               <Field>
-                <FieldLabel htmlFor="order-quantity">Quantity</FieldLabel>
-                <Input id="order-quantity" name="quantity" type="number" step="0.0001" defaultValue="1" required />
-              </Field>
-              <Field>
-                <FieldLabel htmlFor="unit-selling-price">Unit selling price</FieldLabel>
-                <Input id="unit-selling-price" name="unitSellingPrice" type="number" defaultValue={defaultProduct?.sellingPrice ?? 0} required />
-              </Field>
-            </div>
-            <div className="grid gap-3 sm:grid-cols-2">
-              <Field>
-                <FieldLabel htmlFor="order-discount">Discount</FieldLabel>
+                <FieldLabel htmlFor="order-discount">Order-level discount</FieldLabel>
                 <Input id="order-discount" name="discount" type="number" defaultValue="0" required />
               </Field>
               <Field>
@@ -653,7 +941,7 @@ export function OrderCreateForm({ state }: { state: InventoryState }) {
               </Field>
               <Field>
                 <FieldLabel htmlFor="order-packaging">Packaging cost</FieldLabel>
-                <Input id="order-packaging" name="packagingCost" type="number" defaultValue={defaultProduct?.packagingCost ?? 0} required />
+                <Input id="order-packaging" name="packagingCost" type="number" defaultValue="0" required />
               </Field>
             </div>
             <Field>
@@ -661,7 +949,7 @@ export function OrderCreateForm({ state }: { state: InventoryState }) {
               <Input id="order-notes" name="notes" />
             </Field>
           </FieldGroup>
-          <PendingButton type="submit" disabled={!defaultProduct} pendingText="Saving order...">
+          <PendingButton type="submit" disabled={!state.products.length} pendingText="Saving order...">
             Save order
           </PendingButton>
           <RefreshingIndicator show={isRefreshing} />

@@ -1,6 +1,7 @@
 import { notFound } from "next/navigation";
 import { BadgePercent, CircleDollarSign, Factory, Sparkles } from "lucide-react";
 
+import { ProductEditForm } from "@/components/forms/master-data-forms";
 import { KpiCard, PageHeader } from "@/components/layout/page-helpers";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -49,6 +50,7 @@ export default async function ProductDetailPage({
         title={product.name}
         description={`${product.sku} · Product detail and BOM editor preview.`}
         eyebrow="Product detail"
+        action={<ProductEditForm state={state} product={product} />}
       />
 
       <section className="grid gap-4 md:grid-cols-4">

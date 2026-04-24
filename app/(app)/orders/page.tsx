@@ -38,6 +38,7 @@ export default async function OrdersPage() {
               <TableHeader>
                 <TableRow>
                   <TableHead>Order</TableHead>
+                  <TableHead>Products</TableHead>
                   <TableHead>Date</TableHead>
                   <TableHead>Platform</TableHead>
                   <TableHead>Status</TableHead>
@@ -49,6 +50,7 @@ export default async function OrdersPage() {
               <TableBody>
                 {state.orders.length ? state.orders.map((order) => {
                   const profit = calculateOrderProfit(state, order.id);
+                  const items = state.orderItems.filter((item) => item.orderId === order.id);
                   return (
                     <TableRow key={order.id}>
                       <TableCell>
@@ -56,6 +58,18 @@ export default async function OrdersPage() {
                           {order.orderNumber}
                         </Link>
                         <div className="text-xs text-muted-foreground">{order.customerName}</div>
+                      </TableCell>
+                      <TableCell>
+                        <div className="flex flex-col gap-0.5">
+                          {items.map((item) => {
+                            const product = state.products.find((entry) => entry.id === item.productId);
+                            return (
+                              <span key={item.id} className="text-sm">
+                                {product?.name ?? "Unknown product"} x {item.quantity}
+                              </span>
+                            );
+                          })}
+                        </div>
                       </TableCell>
                       <TableCell>{formatDate(order.orderDate)}</TableCell>
                       <TableCell>{order.platform}</TableCell>
@@ -71,7 +85,7 @@ export default async function OrdersPage() {
                   );
                 }) : (
                   <TableRow>
-                    <TableCell colSpan={7} className="h-40">
+                    <TableCell colSpan={8} className="h-40">
                       <EmptyState
                         title="No orders recorded"
                         description="Create orders with the form beside this table."

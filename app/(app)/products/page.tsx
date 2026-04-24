@@ -44,7 +44,7 @@ export default async function ProductsPage() {
           </CardDescription>
         </CardHeader>
         <CardContent>
-          <ProductsTable data={rows} />
+          <ProductsTable data={rows} state={state} />
         </CardContent>
       </Card>
     </>
