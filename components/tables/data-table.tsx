@@ -23,6 +23,7 @@ import {
 } from "@tanstack/react-table";
 import type { ReactNode } from "react";
 import { useMemo, useState } from "react";
+import { useRouter } from "next/navigation";
 
 import { Button } from "@/components/ui/button";
 import {
@@ -55,6 +56,7 @@ interface DataTableProps<TData, TValue> {
   loading?: boolean;
   loadingRows?: number;
   mobileCard?: (row: TData) => ReactNode;
+  getRowHref?: (row: TData) => string;
 }
 
 export function DataTable<TData, TValue>({
@@ -66,7 +68,9 @@ export function DataTable<TData, TValue>({
   loading = false,
   loadingRows = 6,
   mobileCard,
+  getRowHref,
 }: DataTableProps<TData, TValue>) {
+  const router = useRouter();
   const [sorting, setSorting] = useState<SortingState>([]);
   const [columnFilters, setColumnFilters] = useState<ColumnFiltersState>([]);
   const [columnVisibility, setColumnVisibility] = useState<VisibilityState>({});
@@ -102,9 +106,19 @@ export function DataTable<TData, TValue>({
   const pageCount = table.getPageCount();
   const pageIndex = table.getState().pagination.pageIndex;
   const mobileRows = useMemo(
-    () => (mobileCard ? rows.map((row) => ({ id: row.id, content: mobileCard(row.original) })) : []),
-    [mobileCard, rows],
+    () => (mobileCard ? rows.map((row) => ({
+      id: row.id,
+      content: mobileCard(row.original),
+      href: getRowHref?.(row.original),
+    })) : []),
+    [getRowHref, mobileCard, rows],
   );
+
+  function isInteractiveTarget(target: EventTarget | null) {
+    return target instanceof HTMLElement && Boolean(
+      target.closest("a,button,input,select,textarea,[role='button'],[data-no-row-click]"),
+    );
+  }
 
   return (
     <div className="flex flex-col gap-3">
@@ -171,7 +185,19 @@ export function DataTable<TData, TValue>({
               </div>
             ))
           ) : mobileRows.length ? (
-            mobileRows.map((row) => <div key={row.id}>{row.content}</div>)
+            mobileRows.map((row) => (
+              <div
+                key={row.id}
+                className={row.href ? "cursor-pointer" : undefined}
+                onClick={(event) => {
+                  if (row.href && !isInteractiveTarget(event.target)) {
+                    router.push(row.href);
+                  }
+                }}
+              >
+                {row.content}
+              </div>
+            ))
           ) : (
             <EmptyState title={emptyTitle} description={emptyDescription} />
           )}
@@ -224,15 +250,33 @@ export function DataTable<TData, TValue>({
                 </TableRow>
               ))
             ) : rows.length ? (
-              rows.map((row) => (
-                <TableRow key={row.id}>
+              rows.map((row) => {
+                const href = getRowHref?.(row.original);
+                return (
+                <TableRow
+                  key={row.id}
+                  className={href ? "cursor-pointer" : undefined}
+                  tabIndex={href ? 0 : undefined}
+                  onClick={(event) => {
+                    if (href && !isInteractiveTarget(event.target)) {
+                      router.push(href);
+                    }
+                  }}
+                  onKeyDown={(event) => {
+                    if (href && (event.key === "Enter" || event.key === " ") && !isInteractiveTarget(event.target)) {
+                      event.preventDefault();
+                      router.push(href);
+                    }
+                  }}
+                >
                   {row.getVisibleCells().map((cell) => (
                     <TableCell key={cell.id}>
                       {flexRender(cell.column.columnDef.cell, cell.getContext())}
                     </TableCell>
                   ))}
                 </TableRow>
-              ))
+                );
+              })
             ) : (
               <TableRow>
                 <TableCell colSpan={visibleColumns.length} className="h-40">

@@ -1,13 +1,15 @@
 export type Unit = "pcs" | "pack" | "gram" | "meter" | "cm" | "roll" | "set";
 
 export type MaterialCategory =
+  | "fuzzy_pipes"
   | "pearl"
-  | "wire"
-  | "string"
-  | "packaging"
+  | "stemen"
+  | "stem"
+  | "wrapping"
+  | "accessory"
   | "adhesive"
   | "label"
-  | "accessory";
+  | "packaging";
 
 export type EstimationStatus = "formula_estimated" | "manually_verified" | "sample_data";
 
@@ -98,6 +100,8 @@ export interface MaterialVariant {
   estimationStatus: EstimationStatus;
   costPerUsageUnit: number;
   stockQuantity: number;
+  minPurchaseQuantity: number;
+  purchaseIncrementQuantity: number;
   usageUnit: Unit;
   active: boolean;
   notes?: string;

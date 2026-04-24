@@ -1,0 +1,12 @@
+
+> pearl-flower-inventory@0.1.0 dev
+> next dev --webpack
+
+▲ Next.js 16.2.4 (webpack)
+- Local:         http://localhost:3000
+- Network:       http://192.168.110.130:3000
+✓ Ready in 486ms
+
+○ Compiling /products ...
+ GET /products 200 in 6.2s (next.js: 5.4s, proxy.ts: 304ms, application-code: 478ms)
+ GET /products 200 in 356ms (next.js: 10ms, proxy.ts: 167ms, application-code: 180ms)

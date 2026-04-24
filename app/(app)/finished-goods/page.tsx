@@ -1,4 +1,5 @@
 import { PageHeader } from "@/components/layout/page-helpers";
+import { ClickableTableRow } from "@/components/tables/clickable-table-row";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { MoneyCell, QuantityCell, StatusBadge } from "@/components/ui/data-display";
 import { ProductImage } from "@/components/ui/product-image";
@@ -46,7 +47,7 @@ export default async function FinishedGoodsPage() {
               {state.products.length ? state.products.map((product) => {
                 const available = product.currentStock - product.reservedStock;
                 return (
-                  <TableRow key={product.id}>
+                  <ClickableTableRow key={product.id} href={`/products/${product.id}`}>
                     <TableCell>
                       <div className="flex items-center justify-center gap-3 text-left font-medium">
                         <ProductImage product={product} size={44} />
@@ -63,7 +64,7 @@ export default async function FinishedGoodsPage() {
                     <TableCell className="text-center"><div className="flex justify-center"><MoneyCell value={formatRupiahDecimal(product.averageUnitManufacturingCost)} muted /></div></TableCell>
                     <TableCell className="text-center"><div className="flex justify-center"><MoneyCell value={formatRupiahDecimal(product.lastProductionCost)} muted /></div></TableCell>
                     <TableCell className="text-center"><div className="flex justify-center"><MoneyCell value={formatRupiah(product.currentStock * product.averageUnitManufacturingCost)} /></div></TableCell>
-                  </TableRow>
+                  </ClickableTableRow>
                 );
               }) : (
                 <TableRow>

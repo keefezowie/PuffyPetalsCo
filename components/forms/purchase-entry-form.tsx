@@ -167,6 +167,7 @@ function PurchaseLinesEditor({
 
 export function PurchaseEntryForm({ state }: { state: InventoryState }) {
   const router = useRouter();
+  const [open, setOpen] = useState(false);
   const [isRefreshing, startRefresh] = useTransition();
   const defaultSupplier = state.suppliers[0]?.id ?? "";
   const defaultVariant =
@@ -206,6 +207,7 @@ export function PurchaseEntryForm({ state }: { state: InventoryState }) {
       toast.success("Purchase saved", {
         description: "Material stock, latest cost, movement log, and price history were updated.",
       });
+      setOpen(false);
       startRefresh(() => {
         router.refresh();
       });
@@ -217,7 +219,7 @@ export function PurchaseEntryForm({ state }: { state: InventoryState }) {
   }
 
   return (
-    <Dialog>
+    <Dialog open={open} onOpenChange={setOpen}>
       <DialogTrigger render={<Button />}>
         <PackagePlus data-icon="inline-start" aria-hidden />
         Record purchase

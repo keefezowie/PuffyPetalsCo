@@ -2,6 +2,7 @@ import Link from "next/link";
 
 import { OrderCreateForm } from "@/components/forms/master-data-forms";
 import { PageHeader } from "@/components/layout/page-helpers";
+import { ClickableTableRow } from "@/components/tables/clickable-table-row";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { MoneyCell, StatusBadge } from "@/components/ui/data-display";
 import { ProductImage } from "@/components/ui/product-image";
@@ -53,7 +54,7 @@ export default async function OrdersPage() {
                   const profit = calculateOrderProfit(state, order.id);
                   const items = state.orderItems.filter((item) => item.orderId === order.id);
                   return (
-                    <TableRow key={order.id}>
+                    <ClickableTableRow key={order.id} href={`/orders/${order.id}`}>
                       <TableCell>
                         <Link href={`/orders/${order.id}`} className="font-medium hover:underline">
                           {order.orderNumber}
@@ -83,7 +84,7 @@ export default async function OrdersPage() {
                       <TableCell><MoneyCell value={formatRupiah(profit.netRevenue)} /></TableCell>
                       <TableCell><MoneyCell value={formatRupiah(profit.netProfit)} /></TableCell>
                       <TableCell>{formatPercent(profit.margin)}</TableCell>
-                    </TableRow>
+                    </ClickableTableRow>
                   );
                 }) : (
                   <TableRow>

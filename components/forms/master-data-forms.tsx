@@ -32,12 +32,14 @@ import {
   createOrderAction,
   createProductWithBomAction,
   createSupplierAction,
+  updateOrderStatusAction,
   updateProductAction,
   updateSettingsAction,
 } from "@/lib/services/supabase-inventory";
 import type {
   InventoryState,
   MaterialCategory,
+  Order,
   OrderStatus,
   PaymentStatus,
   Product,
@@ -47,18 +49,21 @@ import type {
 } from "@/lib/types";
 
 const materialCategories: MaterialCategory[] = [
+  "fuzzy_pipes",
   "pearl",
-  "wire",
-  "string",
-  "packaging",
+  "stemen",
+  "stem",
+  "wrapping",
+  "accessory",
   "adhesive",
   "label",
-  "accessory",
+  "packaging",
 ];
 
 const units: Unit[] = ["pcs", "pack", "gram", "meter", "cm", "roll", "set"];
 const platforms: SalesPlatform[] = ["Shopee", "Instagram", "WhatsApp", "Offline", "Other"];
 const orderStatuses: OrderStatus[] = ["draft", "confirmed", "in_production", "ready_to_pack", "packed", "shipped", "completed", "cancelled", "returned"];
+const postFulfillmentOrderStatuses: OrderStatus[] = ["packed", "shipped", "completed", "cancelled", "returned"];
 const paymentStatuses: PaymentStatus[] = ["unpaid", "partial", "paid", "refunded"];
 
 function today() {
@@ -99,6 +104,12 @@ function parseOrderItems(formData: FormData) {
   }));
 }
 
+function formatCategoryLabel(category: string) {
+  return category
+    .replaceAll("_", " ")
+    .replace(/\b\w/g, (letter) => letter.toUpperCase());
+}
+
 function useRefreshToast() {
   const router = useRouter();
   const [isRefreshing, startRefresh] = useTransition();
@@ -118,16 +129,19 @@ function FormDialog({
   children,
 }: {
   buttonLabel: string;
-  children: React.ReactNode;
+  children: React.ReactNode | ((close: () => void) => React.ReactNode);
 }) {
+  const [open, setOpen] = useState(false);
+  const close = () => setOpen(false);
+
   return (
-    <Dialog>
+    <Dialog open={open} onOpenChange={setOpen}>
       <DialogTrigger render={<Button />}>
         <Plus data-icon="inline-start" aria-hidden />
         {buttonLabel}
       </DialogTrigger>
       <DialogContent className="max-h-[min(90svh,920px)] overflow-y-auto sm:max-w-2xl">
-        {children}
+        {typeof children === "function" ? children(close) : children}
       </DialogContent>
     </Dialog>
   );
@@ -250,11 +264,42 @@ function BomLinesEditor({
 
 function OrderLinesEditor({ state }: { state: InventoryState }) {
   const defaultProduct = state.products[0];
+  const productItems = state.products.map((product) => ({
+    value: product.id,
+    label: product.name,
+    description: product.sku,
+  }));
   const [rows, setRows] = useState(() => [{
     key: "1",
     productId: defaultProduct?.id ?? "",
     unitSellingPrice: defaultProduct?.sellingPrice ?? 0,
   }]);
+
+  function updateRowProduct(rowKey: string, productId: string) {
+    const product = state.products.find((entry) => entry.id === productId);
+    setRows((current) =>
+      current.map((row) =>
+        row.key === rowKey
+          ? {
+              ...row,
+              productId,
+              unitSellingPrice: product?.sellingPrice ?? 0,
+            }
+          : row,
+      ),
+    );
+  }
+
+  function updateRowPrice(rowKey: string, value: string) {
+    const unitSellingPrice = Number(value);
+    setRows((current) =>
+      current.map((row) =>
+        row.key === rowKey
+          ? { ...row, unitSellingPrice: Number.isFinite(unitSellingPrice) ? unitSellingPrice : 0 }
+          : row,
+      ),
+    );
+  }
 
   return (
     <div className="flex flex-col gap-3">
@@ -301,13 +346,10 @@ function OrderLinesEditor({ state }: { state: InventoryState }) {
               <FieldLabel>Product</FieldLabel>
               <EntitySelect
                 name={`orderProductId-${row.key}`}
-                defaultValue={row.productId}
+                value={row.productId}
+                onValueChange={(value) => updateRowProduct(row.key, value)}
                 placeholder="Select product"
-                items={state.products.map((product) => ({
-                  value: product.id,
-                  label: product.name,
-                  description: product.sku,
-                }))}
+                items={productItems}
               />
             </Field>
             <Field>
@@ -316,7 +358,14 @@ function OrderLinesEditor({ state }: { state: InventoryState }) {
             </Field>
             <Field>
               <FieldLabel htmlFor={`unit-selling-price-${row.key}`}>Unit selling price</FieldLabel>
-              <Input id={`unit-selling-price-${row.key}`} name={`orderUnitSellingPrice-${row.key}`} type="number" defaultValue={row.unitSellingPrice} required />
+              <Input
+                id={`unit-selling-price-${row.key}`}
+                name={`orderUnitSellingPrice-${row.key}`}
+                type="number"
+                value={row.unitSellingPrice}
+                onChange={(event) => updateRowPrice(row.key, event.target.value)}
+                required
+              />
             </Field>
             <Field className="sm:col-span-2">
               <FieldLabel htmlFor={`line-discount-${row.key}`}>Line discount</FieldLabel>
@@ -332,7 +381,7 @@ function OrderLinesEditor({ state }: { state: InventoryState }) {
 export function SupplierCreateForm() {
   const { isRefreshing, refresh } = useRefreshToast();
 
-  async function action(formData: FormData) {
+  async function action(formData: FormData, close?: () => void) {
     try {
       await createSupplierAction({
         name: asString(formData, "name"),
@@ -345,6 +394,7 @@ export function SupplierCreateForm() {
       toast.success("Supplier saved", {
         description: "Supplier directory and purchase options were refreshed.",
       });
+      close?.();
       refresh();
     } catch (error) {
       toast.error("Supplier failed", {
@@ -355,6 +405,7 @@ export function SupplierCreateForm() {
 
   return (
     <FormDialog buttonLabel="Add supplier">
+    {(close) => (
     <Card className="border-0 shadow-none">
       <CardHeader>
         <CardTitle className="flex items-center gap-2">
@@ -364,7 +415,7 @@ export function SupplierCreateForm() {
         <CardDescription>Create supplier records used by purchases and restock planning.</CardDescription>
       </CardHeader>
       <CardContent>
-        <form action={action} className="flex flex-col gap-5" aria-busy={isRefreshing}>
+        <form action={(formData) => action(formData, close)} className="flex flex-col gap-5" aria-busy={isRefreshing}>
           <FieldGroup>
             <Field>
               <FieldLabel htmlFor="supplier-name">Name</FieldLabel>
@@ -408,6 +459,7 @@ export function SupplierCreateForm() {
         </form>
       </CardContent>
     </Card>
+    )}
     </FormDialog>
   );
 }
@@ -415,7 +467,7 @@ export function SupplierCreateForm() {
 export function MaterialCreateForm({ state }: { state: InventoryState }) {
   const { isRefreshing, refresh } = useRefreshToast();
 
-  async function action(formData: FormData) {
+  async function action(formData: FormData, close?: () => void) {
     try {
       await createMaterialWithVariantAction({
         materialName: asString(formData, "materialName"),
@@ -434,12 +486,15 @@ export function MaterialCreateForm({ state }: { state: InventoryState }) {
         packWeightGram: asNumber(formData, "packWeightGram", 0),
         packPrice: asNumber(formData, "packPrice", 0),
         unitsPerPack: asNumber(formData, "unitsPerPack", 0),
+        minPurchaseQuantity: asNumber(formData, "minPurchaseQuantity", 0),
+        purchaseIncrementQuantity: asNumber(formData, "purchaseIncrementQuantity", 0),
         initialStock: asNumber(formData, "initialStock", 0),
         variantNotes: asString(formData, "variantNotes"),
       });
       toast.success("Material saved", {
         description: "Material family and first variant were added to Supabase.",
       });
+      close?.();
       refresh();
     } catch (error) {
       toast.error("Material failed", {
@@ -450,6 +505,7 @@ export function MaterialCreateForm({ state }: { state: InventoryState }) {
 
   return (
     <FormDialog buttonLabel="Add material">
+    {(close) => (
     <Card className="border-0 shadow-none">
       <CardHeader>
         <CardTitle className="flex items-center gap-2">
@@ -459,7 +515,7 @@ export function MaterialCreateForm({ state }: { state: InventoryState }) {
         <CardDescription>Create a material family with its first stock-tracked variant.</CardDescription>
       </CardHeader>
       <CardContent>
-        <form action={action} className="flex flex-col gap-5" aria-busy={isRefreshing}>
+        <form action={(formData) => action(formData, close)} className="flex flex-col gap-5" aria-busy={isRefreshing}>
           <FieldGroup>
             <Field>
               <FieldLabel htmlFor="material-name">Material family</FieldLabel>
@@ -475,7 +531,7 @@ export function MaterialCreateForm({ state }: { state: InventoryState }) {
                   <SelectGroup>
                     {materialCategories.map((category) => (
                       <SelectItem key={category} value={category}>
-                        {category.replaceAll("_", " ")}
+                        {formatCategoryLabel(category)}
                       </SelectItem>
                     ))}
                   </SelectGroup>
@@ -581,6 +637,18 @@ export function MaterialCreateForm({ state }: { state: InventoryState }) {
               <Input id="initial-stock" name="initialStock" type="number" step="0.0001" defaultValue="0" required />
               <FieldDescription>Use purchases after setup for auditable stock intake.</FieldDescription>
             </Field>
+            <div className="grid gap-3 sm:grid-cols-2">
+              <Field>
+                <FieldLabel htmlFor="min-purchase-quantity">Minimum purchase quantity</FieldLabel>
+                <Input id="min-purchase-quantity" name="minPurchaseQuantity" type="number" step="0.0001" defaultValue="0" />
+                <FieldDescription>Purchase plans round shortage lines up to this quantity.</FieldDescription>
+              </Field>
+              <Field>
+                <FieldLabel htmlFor="purchase-increment-quantity">Purchase increment</FieldLabel>
+                <Input id="purchase-increment-quantity" name="purchaseIncrementQuantity" type="number" step="0.0001" defaultValue="0" />
+                <FieldDescription>Use supplier pack multiples, such as 10 packs or 100 pcs.</FieldDescription>
+              </Field>
+            </div>
             <Field>
               <FieldLabel htmlFor="material-notes">Notes</FieldLabel>
               <Input id="material-notes" name="materialNotes" />
@@ -593,6 +661,7 @@ export function MaterialCreateForm({ state }: { state: InventoryState }) {
         </form>
       </CardContent>
     </Card>
+    )}
     </FormDialog>
   );
 }
@@ -600,7 +669,7 @@ export function MaterialCreateForm({ state }: { state: InventoryState }) {
 export function ProductCreateForm({ state }: { state: InventoryState }) {
   const { isRefreshing, refresh } = useRefreshToast();
 
-  async function action(formData: FormData) {
+  async function action(formData: FormData, close?: () => void) {
     try {
       await createProductWithBomAction({
         name: asString(formData, "name"),
@@ -617,6 +686,7 @@ export function ProductCreateForm({ state }: { state: InventoryState }) {
       toast.success("Product saved", {
         description: "Product and BOM materials were added to the database.",
       });
+      close?.();
       refresh();
     } catch (error) {
       toast.error("Product failed", {
@@ -627,6 +697,7 @@ export function ProductCreateForm({ state }: { state: InventoryState }) {
 
   return (
     <FormDialog buttonLabel="Add product">
+    {(close) => (
     <Card className="border-0 shadow-none">
       <CardHeader>
         <CardTitle className="flex items-center gap-2">
@@ -636,7 +707,7 @@ export function ProductCreateForm({ state }: { state: InventoryState }) {
         <CardDescription>Create a finished good with one or more bill-of-materials lines.</CardDescription>
       </CardHeader>
       <CardContent>
-        <form action={action} className="flex flex-col gap-5" aria-busy={isRefreshing}>
+        <form action={(formData) => action(formData, close)} className="flex flex-col gap-5" aria-busy={isRefreshing}>
           <FieldGroup>
             <div className="grid gap-3 sm:grid-cols-2">
               <Field>
@@ -689,6 +760,7 @@ export function ProductCreateForm({ state }: { state: InventoryState }) {
         </form>
       </CardContent>
     </Card>
+    )}
     </FormDialog>
   );
 }
@@ -701,6 +773,7 @@ export function ProductEditForm({
   product: Product;
 }) {
   const { isRefreshing, refresh } = useRefreshToast();
+  const [open, setOpen] = useState(false);
   const activeBomLines = state.bomLines.filter((line) => line.productId === product.id && line.active);
 
   async function action(formData: FormData) {
@@ -721,6 +794,7 @@ export function ProductEditForm({
       toast.success("Product updated", {
         description: "Product information and active BOM materials were refreshed.",
       });
+      setOpen(false);
       refresh();
     } catch (error) {
       toast.error("Product update failed", {
@@ -730,7 +804,7 @@ export function ProductEditForm({
   }
 
   return (
-    <Dialog>
+    <Dialog open={open} onOpenChange={setOpen}>
       <DialogTrigger render={<Button variant="outline" size="sm" />}>
         <Pencil data-icon="inline-start" aria-hidden />
         Edit
@@ -816,7 +890,7 @@ export function OrderCreateForm({ state }: { state: InventoryState }) {
   const { isRefreshing, refresh } = useRefreshToast();
   const defaultRule = state.platformFeeRules[0];
 
-  async function action(formData: FormData) {
+  async function action(formData: FormData, close?: () => void) {
     const items = parseOrderItems(formData);
     try {
       await createOrderAction({
@@ -837,6 +911,7 @@ export function OrderCreateForm({ state }: { state: InventoryState }) {
       toast.success("Order saved", {
         description: "Order header, product lines, revenue, and reservation state were saved.",
       });
+      close?.();
       refresh();
     } catch (error) {
       toast.error("Order failed", {
@@ -847,6 +922,7 @@ export function OrderCreateForm({ state }: { state: InventoryState }) {
 
   return (
     <FormDialog buttonLabel="Add order">
+    {(close) => (
     <Card className="border-0 shadow-none">
       <CardHeader>
         <CardTitle className="flex items-center gap-2">
@@ -856,12 +932,13 @@ export function OrderCreateForm({ state }: { state: InventoryState }) {
         <CardDescription>Record a customer order with one or more product lines and calculated totals.</CardDescription>
       </CardHeader>
       <CardContent>
-        <form action={action} className="flex flex-col gap-5" aria-busy={isRefreshing}>
+        <form action={(formData) => action(formData, close)} className="flex flex-col gap-5" aria-busy={isRefreshing}>
           <FieldGroup>
             <div className="grid gap-3 sm:grid-cols-2">
               <Field>
                 <FieldLabel htmlFor="order-number">Order number</FieldLabel>
-                <Input id="order-number" name="orderNumber" placeholder="ORD-001" required />
+                <Input id="order-number" name="orderNumber" placeholder="Auto: SO-YYYY-####" />
+                <FieldDescription>Leave blank to generate the next sales order number.</FieldDescription>
               </Field>
               <Field>
                 <FieldLabel htmlFor="order-date">Date</FieldLabel>
@@ -956,7 +1033,101 @@ export function OrderCreateForm({ state }: { state: InventoryState }) {
         </form>
       </CardContent>
     </Card>
+    )}
     </FormDialog>
+  );
+}
+
+export function OrderStatusUpdateForm({ order }: { order: Order }) {
+  const { isRefreshing, refresh } = useRefreshToast();
+  const [open, setOpen] = useState(false);
+  const editableStatuses = order.stockDeducted ? postFulfillmentOrderStatuses : orderStatuses;
+  const defaultStatus = editableStatuses.includes(order.status) ? order.status : "packed";
+
+  async function action(formData: FormData) {
+    try {
+      await updateOrderStatusAction({
+        orderId: order.id,
+        status: asString(formData, "status", defaultStatus) as OrderStatus,
+        paymentStatus: asString(formData, "paymentStatus", order.paymentStatus) as PaymentStatus,
+      });
+      toast.success("Order updated", {
+        description: "Order and payment status were saved.",
+      });
+      setOpen(false);
+      refresh();
+    } catch (error) {
+      toast.error("Order update failed", {
+        description: error instanceof Error ? error.message : "Unknown order status error.",
+      });
+    }
+  }
+
+  return (
+    <Dialog open={open} onOpenChange={setOpen}>
+      <DialogTrigger render={<Button variant="outline" size="sm" />}>
+        <Pencil data-icon="inline-start" aria-hidden />
+        Edit status
+      </DialogTrigger>
+      <DialogContent className="sm:max-w-md">
+        <Card className="border-0 shadow-none">
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <ShoppingBag aria-hidden />
+              Order Status
+            </CardTitle>
+            <CardDescription>Update fulfillment and payment state for {order.orderNumber}.</CardDescription>
+          </CardHeader>
+          <CardContent>
+            <form action={action} className="flex flex-col gap-5" aria-busy={isRefreshing}>
+              <FieldGroup>
+                <Field>
+                  <FieldLabel>Status</FieldLabel>
+                  <Select name="status" defaultValue={defaultStatus}>
+                    <SelectTrigger className="w-full">
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectGroup>
+                        {editableStatuses.map((status) => (
+                          <SelectItem key={status} value={status}>
+                            {status.replaceAll("_", " ")}
+                          </SelectItem>
+                        ))}
+                      </SelectGroup>
+                    </SelectContent>
+                  </Select>
+                  {order.stockDeducted ? (
+                    <FieldDescription>
+                      Fulfilled orders can move from packed onward.
+                    </FieldDescription>
+                  ) : null}
+                </Field>
+                <Field>
+                  <FieldLabel>Payment</FieldLabel>
+                  <Select name="paymentStatus" defaultValue={order.paymentStatus}>
+                    <SelectTrigger className="w-full">
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectGroup>
+                        {paymentStatuses.map((status) => (
+                          <SelectItem key={status} value={status}>{status}</SelectItem>
+                        ))}
+                      </SelectGroup>
+                    </SelectContent>
+                  </Select>
+                </Field>
+              </FieldGroup>
+              <PendingButton type="submit" pendingText="Saving status...">
+                Save status
+              </PendingButton>
+              <RefreshingIndicator show={isRefreshing} />
+            </form>
+          </CardContent>
+        </Card>
+      </DialogContent>
+    </Dialog>
   );
 }
 
@@ -964,7 +1135,7 @@ export function SettingsUpdateForm({ state }: { state: InventoryState }) {
   const { isRefreshing, refresh } = useRefreshToast();
   const settings = state.settings;
 
-  async function action(formData: FormData) {
+  async function action(formData: FormData, close?: () => void) {
     try {
       await updateSettingsAction({
         allowNegativeStock: asString(formData, "allowNegativeStock", "false") === "true",
@@ -979,6 +1150,7 @@ export function SettingsUpdateForm({ state }: { state: InventoryState }) {
       toast.success("Settings saved", {
         description: "Costing and stock rules were updated.",
       });
+      close?.();
       refresh();
     } catch (error) {
       toast.error("Settings failed", {
@@ -989,6 +1161,7 @@ export function SettingsUpdateForm({ state }: { state: InventoryState }) {
 
   return (
     <FormDialog buttonLabel="Update settings">
+    {(close) => (
     <Card className="border-0 shadow-none">
       <CardHeader>
         <CardTitle className="flex items-center gap-2">
@@ -998,7 +1171,7 @@ export function SettingsUpdateForm({ state }: { state: InventoryState }) {
         <CardDescription>Persist costing defaults and stock policy to Supabase.</CardDescription>
       </CardHeader>
       <CardContent>
-        <form action={action} className="flex flex-col gap-5" aria-busy={isRefreshing}>
+        <form action={(formData) => action(formData, close)} className="flex flex-col gap-5" aria-busy={isRefreshing}>
           <FieldGroup>
             <Field>
               <FieldLabel>Allow negative stock</FieldLabel>
@@ -1034,6 +1207,7 @@ export function SettingsUpdateForm({ state }: { state: InventoryState }) {
         </form>
       </CardContent>
     </Card>
+    )}
     </FormDialog>
   );
 }

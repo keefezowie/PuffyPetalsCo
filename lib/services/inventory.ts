@@ -491,6 +491,11 @@ export function planPurchaseListFromBatch(
         : undefined;
       const requiredQuantity = line.effectiveQuantity * batch.quantityMade;
       const shortageQuantity = Math.max(0, requiredQuantity - variant.stockQuantity);
+      const recommendedPurchaseQuantity = roundPurchaseQuantity(
+        shortageQuantity,
+        variant.minPurchaseQuantity,
+        variant.purchaseIncrementQuantity,
+      );
       return {
         materialVariantId: variant.id,
         materialName: line.materialName,
@@ -499,7 +504,7 @@ export function planPurchaseListFromBatch(
         requiredQuantity,
         availableQuantity: variant.stockQuantity,
         shortageQuantity,
-        recommendedPurchaseQuantity: shortageQuantity,
+        recommendedPurchaseQuantity,
         purchaseUnit: material.purchaseUnit,
         usageUnit: variant.usageUnit,
       };
@@ -531,6 +536,21 @@ export function createPurchaseListFromBatch(
     notes?: string;
   },
 ) {
+  const existing = state.purchaseLists.find(
+    (list) => list.productionBatchId === input.productionBatchId,
+  );
+
+  if (existing) {
+    return {
+      state,
+      plan: planPurchaseListFromBatch(state, input.productionBatchId),
+      purchaseList: existing,
+      purchaseListLines: state.purchaseListLines.filter(
+        (line) => line.purchaseListId === existing.id,
+      ),
+    };
+  }
+
   const plan = planPurchaseListFromBatch(state, input.productionBatchId);
   const now = new Date().toISOString();
   const purchaseList: PurchaseList = {
@@ -570,6 +590,26 @@ export function createPurchaseListFromBatch(
     purchaseList,
     purchaseListLines,
   };
+}
+
+export function roundPurchaseQuantity(
+  shortageQuantity: number,
+  minPurchaseQuantity = 0,
+  purchaseIncrementQuantity = 0,
+) {
+  if (shortageQuantity <= 0) {
+    return 0;
+  }
+
+  const minimum = Math.max(0, minPurchaseQuantity);
+  const increment = Math.max(0, purchaseIncrementQuantity);
+  const baseQuantity = Math.max(shortageQuantity, minimum);
+
+  if (increment <= 0) {
+    return baseQuantity;
+  }
+
+  return Math.ceil(baseQuantity / increment) * increment;
 }
 
 export function createProductionBatch(
@@ -872,7 +912,9 @@ export function fulfillOrder(state: InventoryState, orderId: string) {
     netRevenue - cogs - order.shippingCostPaid - order.packagingCost;
   const updatedOrder: Order = {
     ...order,
-    status: order.status === "confirmed" ? "packed" : order.status,
+    status: ["completed", "cancelled", "returned"].includes(order.status)
+      ? order.status
+      : "packed",
     fulfillmentStatus: "fulfilled",
     subtotal,
     netRevenue,

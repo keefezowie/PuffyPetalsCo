@@ -34,6 +34,12 @@ type SelectBuilder = {
   eq: (column: string, value: unknown) => SelectBuilder;
   single: () => Promise<{ data: unknown; error: DbError | null }>;
   maybeSingle: () => Promise<{ data: unknown; error: DbError | null }>;
+  then: <TResult1 = { data: unknown[] | null; error: DbError | null }, TResult2 = never>(
+    onfulfilled?:
+      | ((value: { data: unknown[] | null; error: DbError | null }) => TResult1 | PromiseLike<TResult1>)
+      | null,
+    onrejected?: ((reason: unknown) => TResult2 | PromiseLike<TResult2>) | null,
+  ) => Promise<TResult1 | TResult2>;
 };
 
 type WriteBuilder = {
@@ -141,6 +147,28 @@ export async function createProductionBatchAction(input: {
   revalidatePath("/finished-goods");
   revalidatePath("/dashboard");
   return data;
+}
+
+async function generateOrderNumber(db: DbClient, ownerId: string, orderDate: string) {
+  const year = new Date(orderDate).getFullYear();
+  const prefix = `SO-${year}-`;
+  const { data, error } = await db
+    .from("orders")
+    .select("order_number")
+    .eq("owner_id", ownerId);
+
+  if (error) {
+    throw new Error(error.message);
+  }
+
+  const nextSequence = ((data ?? []) as Array<{ order_number?: string }>)
+    .map((row) => row.order_number ?? "")
+    .filter((orderNumber) => orderNumber.startsWith(prefix))
+    .map((orderNumber) => Number(orderNumber.slice(prefix.length)))
+    .filter((value) => Number.isFinite(value))
+    .reduce((max, value) => Math.max(max, value), 0) + 1;
+
+  return `${prefix}${String(nextSequence).padStart(4, "0")}`;
 }
 
 export async function planProductionFromOrderAction(input: {
@@ -273,6 +301,7 @@ export async function fulfillOrderAction(orderId: string) {
   }
 
   revalidatePath("/orders");
+  revalidatePath(`/orders/${orderId}`);
   revalidatePath("/finished-goods");
   revalidatePath("/dashboard");
   revalidatePath("/reports");
@@ -363,6 +392,8 @@ export async function createMaterialWithVariantAction(input: {
   packPrice: number;
   unitsPerPack?: number;
   initialStock: number;
+  minPurchaseQuantity?: number;
+  purchaseIncrementQuantity?: number;
   variantNotes?: string;
 }) {
   const { db, user } = await getMutationContext();
@@ -374,6 +405,8 @@ export async function createMaterialWithVariantAction(input: {
   assertNonNegative(input.targetStock, "Target stock");
   assertNonNegative(input.packPrice, "Pack price");
   assertNonNegative(input.initialStock, "Initial stock");
+  assertNonNegative(input.minPurchaseQuantity ?? 0, "Minimum purchase quantity");
+  assertNonNegative(input.purchaseIncrementQuantity ?? 0, "Purchase increment quantity");
 
   const unitsPerPack =
     input.unitsPerPack && input.unitsPerPack > 0
@@ -427,6 +460,8 @@ export async function createMaterialWithVariantAction(input: {
         input.unitsPerPack && input.unitsPerPack > 0 ? "manually_verified" : "formula_estimated",
       cost_per_usage_unit: costPerUsageUnit,
       stock_quantity: input.initialStock,
+      min_purchase_quantity: input.minPurchaseQuantity ?? 0,
+      purchase_increment_quantity: input.purchaseIncrementQuantity ?? 0,
       usage_unit: input.usageUnit,
       active: true,
       notes: optionalText(input.variantNotes),
@@ -684,7 +719,7 @@ export async function updateProductAction(input: {
 }
 
 export async function createOrderAction(input: {
-  orderNumber: string;
+  orderNumber?: string;
   orderDate: string;
   customerName: string;
   platform: SalesPlatform;
@@ -707,7 +742,8 @@ export async function createOrderAction(input: {
   }>;
 }) {
   const { db, user } = await getMutationContext();
-  const orderNumber = requireText(input.orderNumber, "Order number");
+  const orderDate = input.orderDate || new Date().toISOString().slice(0, 10);
+  const orderNumber = optionalText(input.orderNumber) ?? await generateOrderNumber(db, user.id, orderDate);
   const customerName = requireText(input.customerName, "Customer name");
   const orderItems = input.items?.length
     ? input.items
@@ -782,7 +818,7 @@ export async function createOrderAction(input: {
     .insert({
       owner_id: user.id,
       order_number: orderNumber,
-      order_date: input.orderDate,
+      order_date: orderDate,
       customer_name: customerName,
       platform: input.platform,
       status: input.status,
@@ -857,6 +893,52 @@ export async function createOrderAction(input: {
 
   revalidatePath("/orders");
   revalidatePath("/finished-goods");
+  revalidatePath("/dashboard");
+  revalidatePath("/reports");
+  return orderId;
+}
+
+export async function updateOrderStatusAction(input: {
+  orderId: string;
+  status: OrderStatus;
+  paymentStatus: PaymentStatus;
+}) {
+  const { db, user } = await getMutationContext();
+  const orderId = requireText(input.orderId, "Order");
+
+  const { data: orderData, error: orderError } = await db
+    .from("orders")
+    .select("status,stock_deducted")
+    .eq("id", orderId)
+    .eq("owner_id", user.id)
+    .single();
+
+  if (orderError) {
+    throw new Error(orderError.message);
+  }
+
+  const order = orderData as { status: OrderStatus; stock_deducted: boolean };
+  const allowedAfterPacked: OrderStatus[] = ["packed", "shipped", "completed", "cancelled", "returned"];
+
+  if (order.stock_deducted && !allowedAfterPacked.includes(input.status)) {
+    throw new Error("Fulfilled orders can only move from packed onward.");
+  }
+
+  const { error } = await db
+    .from("orders")
+    .update({
+      status: input.status,
+      payment_status: input.paymentStatus,
+    })
+    .eq("id", orderId)
+    .eq("owner_id", user.id);
+
+  if (error) {
+    throw new Error(error.message);
+  }
+
+  revalidatePath("/orders");
+  revalidatePath(`/orders/${orderId}`);
   revalidatePath("/dashboard");
   revalidatePath("/reports");
   return orderId;

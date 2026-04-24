@@ -30,7 +30,7 @@ export function OrderFulfillmentButton({
         try {
           await fulfillOrderAction(orderId);
           toast.success("Order fulfilled", {
-            description: "Finished goods stock, COGS, and profit were updated.",
+            description: "Finished goods stock, COGS, profit, and packed status were updated.",
           });
           startRefresh(() => {
             router.refresh();

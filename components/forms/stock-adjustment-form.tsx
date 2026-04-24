@@ -30,6 +30,7 @@ export function StockAdjustmentForm({
   triggerSize?: "default" | "sm";
 }) {
   const router = useRouter();
+  const [open, setOpen] = useState(false);
   const [isRefreshing, startRefresh] = useTransition();
   const defaultVariant =
     defaultVariantId && state.materialVariants.some((entry) => entry.id === defaultVariantId)
@@ -59,6 +60,7 @@ export function StockAdjustmentForm({
       toast.success("Stock adjustment saved", {
         description: "The adjustment and matching inventory movement were recorded.",
       });
+      setOpen(false);
       startRefresh(() => {
         router.refresh();
       });
@@ -70,7 +72,7 @@ export function StockAdjustmentForm({
   }
 
   return (
-    <Dialog>
+    <Dialog open={open} onOpenChange={setOpen}>
       <DialogTrigger render={<Button variant={triggerVariant} size={triggerSize} />}>
         {triggerSize === "default" ? <SlidersHorizontal data-icon="inline-start" aria-hidden /> : null}
         {triggerLabel}

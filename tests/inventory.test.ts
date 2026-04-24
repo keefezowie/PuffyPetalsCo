@@ -18,6 +18,7 @@ import {
   planProductionFromOrder,
   planPurchaseListFromBatch,
   recordPurchase,
+  roundPurchaseQuantity,
 } from "@/lib/services/inventory";
 import { pearlCalculatorSchema, settingsSchema } from "@/lib/validations";
 
@@ -134,6 +135,7 @@ describe("inventory operations", () => {
     const first = fulfillOrder(state, "order-demo-001");
 
     expect(first.order.stockDeducted).toBe(true);
+    expect(first.order.status).toBe("packed");
     expect(first.movements).toHaveLength(1);
     expect(() => fulfillOrder(first.state, "order-demo-001")).toThrow(/already/i);
   });
@@ -240,9 +242,34 @@ describe("inventory operations", () => {
     const afterPearl = result.state.materialVariants.find((variant) => variant.id === "var-pearl-12mm")!;
 
     expect(plan.lines.some((line) => line.materialVariantId === "var-pearl-12mm")).toBe(true);
+    expect(plan.lines.find((line) => line.materialVariantId === "var-pearl-12mm")?.recommendedPurchaseQuantity).toBeGreaterThanOrEqual(
+      plan.lines.find((line) => line.materialVariantId === "var-pearl-12mm")?.shortageQuantity ?? 0,
+    );
     expect(result.purchaseListLines.length).toBeGreaterThan(0);
     expect(afterPearl.stockQuantity).toBe(beforePearl.stockQuantity);
     expect(result.state.purchases).toHaveLength(state.purchases.length);
+  });
+
+  it("rounds purchase planning to minimums and pack increments", () => {
+    expect(roundPurchaseQuantity(11, 19, 19)).toBe(19);
+    expect(roundPurchaseQuantity(20, 19, 19)).toBe(38);
+    expect(roundPurchaseQuantity(7, 0, 5)).toBe(10);
+  });
+
+  it("returns an existing open purchase list instead of creating duplicates", () => {
+    const state = getDemoInventoryState();
+    const first = createPurchaseListFromBatch(state, {
+      ownerId: state.settings.ownerId,
+      productionBatchId: "batch-demo-001",
+    });
+    const second = createPurchaseListFromBatch(first.state, {
+      ownerId: state.settings.ownerId,
+      productionBatchId: "batch-demo-001",
+    });
+
+    expect(second.purchaseList.id).toBe(first.purchaseList.id);
+    expect(second.state.purchaseLists).toHaveLength(first.state.purchaseLists.length);
+    expect(second.purchaseListLines).toHaveLength(first.purchaseListLines.length);
   });
 });
 

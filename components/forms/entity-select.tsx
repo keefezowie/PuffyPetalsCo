@@ -68,7 +68,7 @@ export function EntitySelect({
                 <span className="flex min-w-0 flex-col">
                   <span className="truncate">{item.label}</span>
                   {item.description ? (
-                    <span className="truncate text-xs text-muted-foreground">
+                    <span className="truncate text-xs text-muted-foreground group-focus:text-accent-foreground/80">
                       {item.description}
                     </span>
                   ) : null}

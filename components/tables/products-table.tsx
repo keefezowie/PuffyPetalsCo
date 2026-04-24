@@ -110,6 +110,7 @@ export function ProductsTable({ data, state }: { data: ProductRow[]; state: Inve
       searchPlaceholder="Search products, SKU, or margin"
       emptyTitle="No products found"
       emptyDescription="Try another product name, SKU, or margin search."
+      getRowHref={(row) => `/products/${row.id}`}
       mobileCard={(row) => (
         <div className="rounded-lg border bg-card p-3">
           <div className="flex items-start justify-between gap-3">

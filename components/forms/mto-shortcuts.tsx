@@ -50,6 +50,7 @@ export function OrderProductionPlanButton({
   const router = useRouter();
   const [mode, setMode] = useState<ProductionPlanMode>("shortage");
   const [date, setDate] = useState(today());
+  const [open, setOpen] = useState(false);
   const [isWorking, setIsWorking] = useState(false);
   const [isRefreshing, startRefresh] = useTransition();
   const pending = isWorking || isRefreshing;
@@ -59,7 +60,7 @@ export function OrderProductionPlanButton({
   );
 
   return (
-    <Dialog>
+    <Dialog open={open} onOpenChange={setOpen}>
       <DialogTrigger render={<Button variant="outline" disabled={disabled} />}>
         <Factory data-icon="inline-start" aria-hidden />
         Plan production
@@ -149,6 +150,7 @@ export function OrderProductionPlanButton({
                   toast.success("Production planned", {
                     description: "Planned batches were linked to this order.",
                   });
+                  setOpen(false);
                   startRefresh(() => router.refresh());
                 } catch (error) {
                   toast.error("Planning failed", {
@@ -234,19 +236,21 @@ export function PurchaseListFromBatchButton({
   disabled?: boolean;
 }) {
   const router = useRouter();
+  const [open, setOpen] = useState(false);
   const [isWorking, setIsWorking] = useState(false);
   const [isRefreshing, startRefresh] = useTransition();
   const pending = isWorking || isRefreshing;
+  const existingList = state.purchaseLists.find((list) => list.productionBatchId === batchId);
   const plan = useMemo(
     () => planPurchaseListFromBatch(state, batchId),
     [state, batchId],
   );
 
   return (
-    <Dialog>
-      <DialogTrigger render={<Button variant="outline" disabled={disabled} />}>
+    <Dialog open={open} onOpenChange={setOpen}>
+      <DialogTrigger render={<Button variant="outline" disabled={disabled || Boolean(existingList)} />}>
         <PackageSearch data-icon="inline-start" aria-hidden />
-        Plan purchases
+        {existingList ? "Purchase list exists" : "Plan purchases"}
       </DialogTrigger>
       <DialogContent className="max-h-[min(90svh,760px)] overflow-y-auto sm:max-w-3xl">
         <div className="flex flex-col gap-5">
@@ -264,6 +268,7 @@ export function PurchaseListFromBatchButton({
                 <TableHead>Required</TableHead>
                 <TableHead>Available</TableHead>
                 <TableHead>Shortage</TableHead>
+                <TableHead>Plan Qty</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
@@ -278,17 +283,18 @@ export function PurchaseListFromBatchButton({
                       {formatQuantity(line.shortageQuantity, line.usageUnit)}
                     </Badge>
                   </TableCell>
+                  <TableCell>{formatQuantity(line.recommendedPurchaseQuantity, line.usageUnit)}</TableCell>
                 </TableRow>
               )) : (
                 <TableRow>
-                  <TableCell colSpan={5}>No material shortages were found for this batch.</TableCell>
+                  <TableCell colSpan={6}>No material shortages were found for this batch.</TableCell>
                 </TableRow>
               )}
             </TableBody>
           </Table>
           <div className="flex justify-end">
             <Button
-              disabled={!plan.hasShortages || pending}
+              disabled={!plan.hasShortages || pending || Boolean(existingList)}
               aria-busy={pending}
               onClick={async () => {
                 setIsWorking(true);
@@ -300,6 +306,7 @@ export function PurchaseListFromBatchButton({
                   toast.success("Purchase list created", {
                     description: "Shortage lines are ready in Purchases.",
                   });
+                  setOpen(false);
                   startRefresh(() => router.refresh());
                 } catch (error) {
                   toast.error("Purchase planning failed", {
@@ -346,6 +353,7 @@ export function ReceivePurchaseListButton({
   disabled?: boolean;
 }) {
   const router = useRouter();
+  const [open, setOpen] = useState(false);
   const [isRefreshing, startRefresh] = useTransition();
   const purchaseList = state.purchaseLists.find((list) => list.id === purchaseListId);
   const lines = state.purchaseListLines.filter((line) => line.purchaseListId === purchaseListId);
@@ -396,6 +404,7 @@ export function ReceivePurchaseListButton({
       toast.success("Purchase list received", {
         description: "Purchase receipt records were created and raw material stock was updated.",
       });
+      setOpen(false);
       startRefresh(() => router.refresh());
     } catch (error) {
       toast.error("Receiving failed", {
@@ -405,7 +414,7 @@ export function ReceivePurchaseListButton({
   }
 
   return (
-    <Dialog>
+    <Dialog open={open} onOpenChange={setOpen}>
       <DialogTrigger render={<Button variant="outline" size="sm" disabled={disabled || disabledReason} />}>
         <PackageCheck data-icon="inline-start" aria-hidden />
         Receive

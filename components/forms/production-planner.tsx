@@ -39,6 +39,7 @@ type ProductionValues = z.output<typeof productionSchema>;
 export function ProductionPlanner({ initialState }: { initialState: InventoryState }) {
   const router = useRouter();
   const [state] = useState<InventoryState>(initialState);
+  const [open, setOpen] = useState(false);
   const [lastBatchLabel, setLastBatchLabel] = useState<string | null>(null);
   const [isRefreshing, startRefresh] = useTransition();
   const defaultProductId = initialState.products[0]?.id ?? "";
@@ -80,6 +81,7 @@ export function ProductionPlanner({ initialState }: { initialState: InventorySta
       toast.success("Production batch saved", {
         description: `${selectedProduct?.name ?? "Product"} stock and material movements were updated.`,
       });
+      setOpen(false);
       startRefresh(() => {
         router.refresh();
       });
@@ -91,7 +93,7 @@ export function ProductionPlanner({ initialState }: { initialState: InventorySta
   });
 
   return (
-    <Dialog>
+    <Dialog open={open} onOpenChange={setOpen}>
       <DialogTrigger render={<Button />}>
         <Factory data-icon="inline-start" aria-hidden />
         Create batch

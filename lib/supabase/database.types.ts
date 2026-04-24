@@ -11,13 +11,17 @@ export type Database = {
     Enums: {
       unit_type: "pcs" | "pack" | "gram" | "meter" | "cm" | "roll" | "set";
       material_category:
+        | "fuzzy_pipes"
         | "pearl"
-        | "wire"
-        | "string"
-        | "packaging"
+        | "stemen"
+        | "stem"
+        | "wrapping"
+        | "accessory"
         | "adhesive"
         | "label"
-        | "accessory";
+        | "packaging"
+        | "wire"
+        | "string";
       estimation_status: "formula_estimated" | "manually_verified" | "sample_data";
       inventory_item_type: "raw_material" | "finished_good";
       inventory_movement_type:
@@ -92,6 +96,8 @@ export type Database = {
           estimation_status: Database["public"]["Enums"]["estimation_status"];
           cost_per_usage_unit: number;
           stock_quantity: number;
+          min_purchase_quantity: number;
+          purchase_increment_quantity: number;
           usage_unit: Database["public"]["Enums"]["unit_type"];
           active: boolean;
           notes: string | null;

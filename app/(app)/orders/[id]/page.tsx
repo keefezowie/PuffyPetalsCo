@@ -1,6 +1,7 @@
 import { notFound } from "next/navigation";
 import { BadgePercent, CircleDollarSign, PackageCheck, Wallet } from "lucide-react";
 
+import { OrderStatusUpdateForm } from "@/components/forms/master-data-forms";
 import { OrderProductionPlanButton } from "@/components/forms/mto-shortcuts";
 import { OrderFulfillmentButton } from "@/components/forms/order-fulfillment-button";
 import { KpiCard, PageHeader } from "@/components/layout/page-helpers";
@@ -57,6 +58,7 @@ export default async function OrderDetailPage({
               disabled={order.stockDeducted}
             />
             <OrderFulfillmentButton orderId={order.id} disabled={order.stockDeducted} />
+            <OrderStatusUpdateForm order={order} />
           </>
         }
       />

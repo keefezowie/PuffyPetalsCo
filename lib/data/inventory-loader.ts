@@ -211,7 +211,7 @@ function mapMaterial(row: MaterialRow): Material {
     id: row.id,
     ownerId: row.owner_id,
     name: row.name,
-    category: row.category,
+    category: normalizeMaterialCategory(row.category),
     purchaseUnit: row.purchase_unit,
     usageUnit: row.usage_unit,
     conversionFactor: Number(row.conversion_factor),
@@ -248,6 +248,8 @@ function mapMaterialVariant(row: MaterialVariantRow): MaterialVariant {
     estimationStatus: row.estimation_status,
     costPerUsageUnit: Number(row.cost_per_usage_unit),
     stockQuantity: Number(row.stock_quantity),
+    minPurchaseQuantity: Number(row.min_purchase_quantity ?? 0),
+    purchaseIncrementQuantity: Number(row.purchase_increment_quantity ?? 0),
     usageUnit: row.usage_unit,
     active: row.active,
     notes: row.notes ?? undefined,
@@ -344,6 +346,16 @@ function mapProductionBatch(row: ProductionBatchRow): ProductionBatch {
     completedAt: row.completed_at ?? undefined,
     completedBy: row.completed_by ?? undefined,
   };
+}
+
+function normalizeMaterialCategory(category: string): Material["category"] {
+  if (category === "wire") {
+    return "stem";
+  }
+  if (category === "string") {
+    return "accessory";
+  }
+  return category as Material["category"];
 }
 
 function mapProductionBatchLine(row: ProductionBatchLineRow): ProductionBatchLine {
@@ -526,6 +538,8 @@ type MaterialVariantRow = {
   estimation_status: Enums["estimation_status"];
   cost_per_usage_unit: number | string;
   stock_quantity: number | string;
+  min_purchase_quantity: number | string | null;
+  purchase_increment_quantity: number | string | null;
   usage_unit: Unit;
   active: boolean;
   notes: string | null;

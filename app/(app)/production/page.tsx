@@ -2,6 +2,7 @@ import Link from "next/link";
 
 import { PageHeader } from "@/components/layout/page-helpers";
 import { ProductionPlanner } from "@/components/forms/production-planner";
+import { ClickableTableRow } from "@/components/tables/clickable-table-row";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { MoneyCell, QuantityCell } from "@/components/ui/data-display";
@@ -51,7 +52,7 @@ export default async function ProductionPage() {
               {state.productionBatches.length ? state.productionBatches.map((batch) => {
                 const product = state.products.find((item) => item.id === batch.productId);
                 return (
-                  <TableRow key={batch.id}>
+                  <ClickableTableRow key={batch.id} href={`/production/${batch.id}`}>
                     <TableCell>{formatDate(batch.date)}</TableCell>
                     <TableCell>
                       {product ? (
@@ -73,7 +74,7 @@ export default async function ProductionPage() {
                     <TableCell><QuantityCell value={formatQuantity(batch.quantityMade, "pcs")} /></TableCell>
                     <TableCell><MoneyCell value={formatRupiah(batch.unitManufacturingCost)} muted /></TableCell>
                     <TableCell><MoneyCell value={formatRupiah(batch.totalManufacturingCost)} /></TableCell>
-                  </TableRow>
+                  </ClickableTableRow>
                 );
               }) : (
                 <TableRow>

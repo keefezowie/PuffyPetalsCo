@@ -2,14 +2,31 @@
 
 import type { ColumnDef } from "@tanstack/react-table";
 import Link from "next/link";
-import { useMemo } from "react";
+import { useMemo, useState } from "react";
 
 import { StockAdjustmentForm } from "@/components/forms/stock-adjustment-form";
 import { DataTable } from "@/components/tables/data-table";
 import { Badge } from "@/components/ui/badge";
 import { QuantityCell, MoneyCell, StatusBadge } from "@/components/ui/data-display";
+import { Select, SelectContent, SelectGroup, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { formatQuantity, formatRupiahDecimal } from "@/lib/formatters";
 import type { InventoryState } from "@/lib/types";
+
+const materialCategoryOptions = [
+  { value: "fuzzy_pipes", label: "Fuzzy Pipes" },
+  { value: "pearl", label: "Pearl" },
+  { value: "stemen", label: "Stemen" },
+  { value: "stem", label: "Stem" },
+  { value: "wrapping", label: "Wrapping" },
+  { value: "accessory", label: "Accessory" },
+  { value: "adhesive", label: "Adhesive" },
+  { value: "label", label: "Label" },
+  { value: "packaging", label: "Packaging" },
+];
+
+function formatCategory(value: string) {
+  return materialCategoryOptions.find((option) => option.value === value)?.label ?? value.replaceAll("_", " ");
+}
 
 export interface MaterialRow {
   id: string;
@@ -42,7 +59,7 @@ function createColumns(state: InventoryState): ColumnDef<MaterialRow>[] {
   {
     accessorKey: "category",
     header: "Category",
-    cell: ({ row }) => <Badge variant="secondary">{row.original.category}</Badge>,
+    cell: ({ row }) => <Badge variant="secondary">{formatCategory(row.original.category)}</Badge>,
   },
   {
     accessorKey: "stockQuantity",
@@ -98,14 +115,36 @@ function createColumns(state: InventoryState): ColumnDef<MaterialRow>[] {
 
 export function MaterialsTable({ data, state }: { data: MaterialRow[]; state: InventoryState }) {
   const columns = useMemo(() => createColumns(state), [state]);
+  const [category, setCategory] = useState("all");
+  const filteredData = useMemo(
+    () => (category === "all" ? data : data.filter((row) => row.category === category)),
+    [category, data],
+  );
 
   return (
+    <div className="flex flex-col gap-3">
+      <div className="flex justify-end">
+        <Select value={category} onValueChange={(value) => setCategory(value ?? "all")}>
+          <SelectTrigger className="w-full sm:w-56">
+            <SelectValue />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectGroup>
+              <SelectItem value="all">All categories</SelectItem>
+              {materialCategoryOptions.map((option) => (
+                <SelectItem key={option.value} value={option.value}>{option.label}</SelectItem>
+              ))}
+            </SelectGroup>
+          </SelectContent>
+        </Select>
+      </div>
     <DataTable
       columns={columns}
-      data={data}
+      data={filteredData}
       searchPlaceholder="Search material, variant, size, or category"
       emptyTitle="No materials found"
       emptyDescription="Try a different material name, variant, size, or category."
+      getRowHref={(row) => `/materials/${row.materialId}`}
       mobileCard={(row) => (
         <div className="rounded-lg border bg-card p-3">
           <div className="flex items-start justify-between gap-3">
@@ -144,5 +183,6 @@ export function MaterialsTable({ data, state }: { data: MaterialRow[]; state: In
         </div>
       )}
     />
+    </div>
   );
 }
