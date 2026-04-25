@@ -971,40 +971,15 @@ export async function updateOrderStatusAction(input: {
 
 export async function clearWorkspaceDataAction() {
   try {
-    const { db, user } = await getMutationContext();
-    const tables = [
-      "purchase_list_lines",
-      "production_batch_order_links",
-      "purchase_lines",
-      "production_batch_lines",
-      "order_items",
-      "product_bom_lines",
-      "material_price_history",
-      "stock_adjustments",
-      "inventory_movements",
-      "purchases",
-      "purchase_lists",
-      "production_batches",
-      "orders",
-      "product_images",
-      "products",
-      "material_variants",
-      "materials",
-      "suppliers",
-    ];
+    const { supabase } = await getMutationContext();
+    const rpc = supabase as unknown as RpcClient;
+    const { error } = await rpc.rpc("reset_workspace_data", {});
 
-    for (const table of tables) {
-      const { error } = await db
-        .from(table)
-        .delete()
-        .eq("owner_id", user.id);
-
-      if (error) {
-        return {
-          ok: false,
-          error: `Failed to clear ${table}: ${error.message}`,
-        };
-      }
+    if (error) {
+      return {
+        ok: false,
+        error: error.message,
+      };
     }
 
     revalidatePath("/dashboard");
