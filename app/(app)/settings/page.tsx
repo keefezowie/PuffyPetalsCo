@@ -1,3 +1,4 @@
+import { ClearWorkspaceDataButton } from "@/components/forms/clear-workspace-data-button";
 import { SettingsUpdateForm } from "@/components/forms/master-data-forms";
 import { PageHeader } from "@/components/layout/page-helpers";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -56,6 +57,20 @@ export default async function SettingsPage() {
                 ))}
               </TableBody>
             </Table>
+          </CardContent>
+        </Card>
+      </section>
+
+      <section>
+        <Card className="border-destructive/25">
+          <CardHeader>
+            <CardTitle>Danger Zone</CardTitle>
+            <CardDescription>
+              Clear operational and master data when you need a fresh workspace for testing or restart setup.
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            <ClearWorkspaceDataButton />
           </CardContent>
         </Card>
       </section>

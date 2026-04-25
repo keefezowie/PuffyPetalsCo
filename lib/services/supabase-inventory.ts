@@ -56,11 +56,22 @@ type UpdateBuilder = {
   ) => Promise<TResult1 | TResult2>;
 };
 
+type DeleteBuilder = {
+  eq: (column: string, value: unknown) => DeleteBuilder;
+  then: <TResult1 = { data: unknown[] | null; error: DbError | null }, TResult2 = never>(
+    onfulfilled?:
+      | ((value: { data: unknown[] | null; error: DbError | null }) => TResult1 | PromiseLike<TResult1>)
+      | null,
+    onrejected?: ((reason: unknown) => TResult2 | PromiseLike<TResult2>) | null,
+  ) => Promise<TResult1 | TResult2>;
+};
+
 type DbClient = {
   from: (table: string) => {
     select: (columns?: string) => SelectBuilder;
     insert: (values: Record<string, unknown> | Record<string, unknown>[]) => WriteBuilder;
     update: (values: Record<string, unknown>) => UpdateBuilder;
+    delete: () => DeleteBuilder;
     upsert: (
       values: Record<string, unknown>,
       options?: { onConflict?: string },
@@ -956,6 +967,53 @@ export async function updateOrderStatusAction(input: {
   revalidatePath("/dashboard");
   revalidatePath("/reports");
   return orderId;
+}
+
+export async function clearWorkspaceDataAction() {
+  const { db, user } = await getMutationContext();
+  const tables = [
+    "purchase_list_lines",
+    "production_batch_order_links",
+    "purchase_lines",
+    "production_batch_lines",
+    "order_items",
+    "product_bom_lines",
+    "material_price_history",
+    "stock_adjustments",
+    "inventory_movements",
+    "purchases",
+    "purchase_lists",
+    "production_batches",
+    "orders",
+    "product_images",
+    "products",
+    "material_variants",
+    "materials",
+    "suppliers",
+  ];
+
+  for (const table of tables) {
+    const { error } = await db
+      .from(table)
+      .delete()
+      .eq("owner_id", user.id);
+
+    if (error) {
+      throw new Error(`Failed to clear ${table}: ${error.message}`);
+    }
+  }
+
+  revalidatePath("/dashboard");
+  revalidatePath("/materials");
+  revalidatePath("/products");
+  revalidatePath("/finished-goods");
+  revalidatePath("/orders");
+  revalidatePath("/production");
+  revalidatePath("/purchases");
+  revalidatePath("/suppliers");
+  revalidatePath("/reports");
+  revalidatePath("/settings");
+  return true;
 }
 
 export async function updateSettingsAction(input: {

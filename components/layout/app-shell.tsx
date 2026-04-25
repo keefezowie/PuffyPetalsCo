@@ -21,7 +21,6 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import type { ReactNode } from "react";
 
-import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { buttonVariants } from "@/components/ui/button";
 import { Separator } from "@/components/ui/separator";
@@ -102,10 +101,6 @@ export function AppShell({
                 <div className="font-semibold leading-tight">Puffy Petals Co.</div>
                 <div className="text-xs text-muted-foreground">Inventory and costing</div>
               </div>
-            </div>
-            <div className="flex flex-wrap gap-2">
-              <Badge variant="success">Live Supabase</Badge>
-              <Badge variant="outline">Asia/Jakarta</Badge>
             </div>
           </div>
           <Separator />
@@ -209,9 +204,6 @@ export function AppShell({
               Handmade costing, stock, and fulfillment
             </span>
           </div>
-          <Badge variant="outline" className="hidden sm:inline-flex">
-            Asia/Jakarta
-          </Badge>
           {signOut ? (
             <form action={signOut} className="lg:hidden">
               <Button type="submit" variant="ghost" size="icon-sm" aria-label="Sign out">
