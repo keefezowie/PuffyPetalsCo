@@ -37,7 +37,14 @@ export function ClearWorkspaceDataButton() {
 
     setIsWorking(true);
     try {
-      await clearWorkspaceDataAction();
+      const result = await clearWorkspaceDataAction();
+      if (!result.ok) {
+        toast.error("Clear data failed", {
+          description: result.error,
+        });
+        return;
+      }
+
       toast.success("Workspace data cleared", {
         description: "Orders, materials, products, suppliers, purchases, production, and movements were removed.",
       });

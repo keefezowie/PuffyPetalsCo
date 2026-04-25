@@ -970,50 +970,60 @@ export async function updateOrderStatusAction(input: {
 }
 
 export async function clearWorkspaceDataAction() {
-  const { db, user } = await getMutationContext();
-  const tables = [
-    "purchase_list_lines",
-    "production_batch_order_links",
-    "purchase_lines",
-    "production_batch_lines",
-    "order_items",
-    "product_bom_lines",
-    "material_price_history",
-    "stock_adjustments",
-    "inventory_movements",
-    "purchases",
-    "purchase_lists",
-    "production_batches",
-    "orders",
-    "product_images",
-    "products",
-    "material_variants",
-    "materials",
-    "suppliers",
-  ];
+  try {
+    const { db, user } = await getMutationContext();
+    const tables = [
+      "purchase_list_lines",
+      "production_batch_order_links",
+      "purchase_lines",
+      "production_batch_lines",
+      "order_items",
+      "product_bom_lines",
+      "material_price_history",
+      "stock_adjustments",
+      "inventory_movements",
+      "purchases",
+      "purchase_lists",
+      "production_batches",
+      "orders",
+      "product_images",
+      "products",
+      "material_variants",
+      "materials",
+      "suppliers",
+    ];
 
-  for (const table of tables) {
-    const { error } = await db
-      .from(table)
-      .delete()
-      .eq("owner_id", user.id);
+    for (const table of tables) {
+      const { error } = await db
+        .from(table)
+        .delete()
+        .eq("owner_id", user.id);
 
-    if (error) {
-      throw new Error(`Failed to clear ${table}: ${error.message}`);
+      if (error) {
+        return {
+          ok: false,
+          error: `Failed to clear ${table}: ${error.message}`,
+        };
+      }
     }
-  }
 
-  revalidatePath("/dashboard");
-  revalidatePath("/materials");
-  revalidatePath("/products");
-  revalidatePath("/finished-goods");
-  revalidatePath("/orders");
-  revalidatePath("/production");
-  revalidatePath("/purchases");
-  revalidatePath("/suppliers");
-  revalidatePath("/reports");
-  revalidatePath("/settings");
-  return true;
+    revalidatePath("/dashboard");
+    revalidatePath("/materials");
+    revalidatePath("/products");
+    revalidatePath("/finished-goods");
+    revalidatePath("/orders");
+    revalidatePath("/production");
+    revalidatePath("/purchases");
+    revalidatePath("/suppliers");
+    revalidatePath("/reports");
+    revalidatePath("/settings");
+    return { ok: true };
+  } catch (error) {
+    return {
+      ok: false,
+      error: error instanceof Error ? error.message : "Unknown Supabase error.",
+    };
+  }
 }
 
 export async function updateSettingsAction(input: {

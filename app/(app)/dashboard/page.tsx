@@ -15,7 +15,8 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import { getInventoryState } from "@/lib/data/inventory-loader";
+import { getInventoryStateResult } from "@/lib/data/inventory-loader";
+import { WorkspaceDataError } from "@/components/ui/workspace-data-error";
 import { formatPercent, formatQuantity, formatRupiah } from "@/lib/formatters";
 import {
   calculateOrderProfit,
@@ -23,9 +24,15 @@ import {
   getDashboardMetrics,
   getLowStockMaterials,
 } from "@/lib/services/inventory";
+import type { InventoryState } from "@/lib/types";
 
 export default async function DashboardPage() {
-  const state = await getInventoryState();
+  const stateResult = await getInventoryStateResult();
+  if (!stateResult.ok) {
+    return <WorkspaceDataError message={stateResult.error} />;
+  }
+
+  const state = stateResult.state;
   const metrics = getDashboardMetrics(state);
   const lowStock = getLowStockMaterials(state).slice(0, 5);
   const productMargins = state.products
@@ -274,7 +281,7 @@ export default async function DashboardPage() {
   );
 }
 
-function getSalesProfitByMonth(state: Awaited<ReturnType<typeof getInventoryState>>) {
+function getSalesProfitByMonth(state: InventoryState) {
   const rows = new Map<string, { month: string; revenue: number; profit: number }>();
 
   for (const order of state.orders) {
@@ -298,7 +305,7 @@ function getSalesProfitByMonth(state: Awaited<ReturnType<typeof getInventoryStat
     .map(([, row]) => row);
 }
 
-function getRevenueByPlatform(state: Awaited<ReturnType<typeof getInventoryState>>) {
+function getRevenueByPlatform(state: InventoryState) {
   const rows = new Map<string, number>();
 
   for (const order of state.orders) {

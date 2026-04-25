@@ -16,7 +16,8 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import { getInventoryState } from "@/lib/data/inventory-loader";
+import { getInventoryStateResult } from "@/lib/data/inventory-loader";
+import { WorkspaceDataError } from "@/components/ui/workspace-data-error";
 import { formatPercent, formatQuantity, formatRupiah } from "@/lib/formatters";
 import { calculateOrderProfit } from "@/lib/services/inventory";
 
@@ -26,7 +27,12 @@ export default async function OrderDetailPage({
   params: Promise<{ id: string }>;
 }) {
   const { id } = await params;
-  const state = await getInventoryState();
+  const stateResult = await getInventoryStateResult();
+  if (!stateResult.ok) {
+    return <WorkspaceDataError message={stateResult.error} />;
+  }
+
+  const state = stateResult.state;
   const order = state.orders.find((item) => item.id === id);
 
   if (!order) {

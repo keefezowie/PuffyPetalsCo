@@ -3,10 +3,16 @@ import { StockAdjustmentForm } from "@/components/forms/stock-adjustment-form";
 import { PageHeader } from "@/components/layout/page-helpers";
 import { MaterialsTable, type MaterialRow } from "@/components/tables/materials-table";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { getInventoryState } from "@/lib/data/inventory-loader";
+import { getInventoryStateResult } from "@/lib/data/inventory-loader";
+import { WorkspaceDataError } from "@/components/ui/workspace-data-error";
 
 export default async function MaterialsPage() {
-  const state = await getInventoryState();
+  const stateResult = await getInventoryStateResult();
+  if (!stateResult.ok) {
+    return <WorkspaceDataError message={stateResult.error} />;
+  }
+
+  const state = stateResult.state;
   const rows: MaterialRow[] = state.materialVariants.map((variant) => {
     const material = state.materials.find((item) => item.id === variant.materialId);
     return {

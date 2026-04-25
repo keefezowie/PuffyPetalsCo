@@ -11,7 +11,8 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import { getInventoryState } from "@/lib/data/inventory-loader";
+import { getInventoryStateResult } from "@/lib/data/inventory-loader";
+import { WorkspaceDataError } from "@/components/ui/workspace-data-error";
 import { formatPercent, formatQuantity, formatRupiah, formatRupiahDecimal } from "@/lib/formatters";
 import {
   calculateProductManufacturingCost,
@@ -32,7 +33,12 @@ const reportNames = [
 ];
 
 export default async function ReportsPage() {
-  const state = await getInventoryState();
+  const stateResult = await getInventoryStateResult();
+  if (!stateResult.ok) {
+    return <WorkspaceDataError message={stateResult.error} />;
+  }
+
+  const state = stateResult.state;
   const lowStock = getLowStockMaterials(state);
 
   return (

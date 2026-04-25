@@ -2,10 +2,16 @@ import { OrderCreateForm } from "@/components/forms/master-data-forms";
 import { PageHeader } from "@/components/layout/page-helpers";
 import { OrdersTable } from "@/components/tables/orders-table";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { getInventoryState } from "@/lib/data/inventory-loader";
+import { getInventoryStateResult } from "@/lib/data/inventory-loader";
+import { WorkspaceDataError } from "@/components/ui/workspace-data-error";
 
 export default async function OrdersPage() {
-  const state = await getInventoryState();
+  const stateResult = await getInventoryStateResult();
+  if (!stateResult.ok) {
+    return <WorkspaceDataError message={stateResult.error} />;
+  }
+
+  const state = stateResult.state;
 
   return (
     <>

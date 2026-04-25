@@ -2,14 +2,20 @@ import { ProductCreateForm } from "@/components/forms/master-data-forms";
 import { PageHeader } from "@/components/layout/page-helpers";
 import { ProductsTable, type ProductRow } from "@/components/tables/products-table";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { getInventoryState } from "@/lib/data/inventory-loader";
+import { getInventoryStateResult } from "@/lib/data/inventory-loader";
+import { WorkspaceDataError } from "@/components/ui/workspace-data-error";
 import {
   calculateProductManufacturingCost,
   getRecommendedPrice,
 } from "@/lib/services/inventory";
 
 export default async function ProductsPage() {
-  const state = await getInventoryState();
+  const stateResult = await getInventoryStateResult();
+  if (!stateResult.ok) {
+    return <WorkspaceDataError message={stateResult.error} />;
+  }
+
+  const state = stateResult.state;
   const rows: ProductRow[] = state.products.map((product) => {
     const cost = calculateProductManufacturingCost(state, product.id).totalCost;
     const fee = state.settings.defaultPlatformFeeRate;

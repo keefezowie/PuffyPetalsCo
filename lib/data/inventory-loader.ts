@@ -348,6 +348,23 @@ function mapProductionBatch(row: ProductionBatchRow): ProductionBatch {
   };
 }
 
+export async function getInventoryStateResult(): Promise<
+  | { ok: true; state: InventoryState }
+  | { ok: false; error: string }
+> {
+  try {
+    return {
+      ok: true,
+      state: await getInventoryState(),
+    };
+  } catch (error) {
+    return {
+      ok: false,
+      error: error instanceof Error ? error.message : "Unknown Supabase data loading error.",
+    };
+  }
+}
+
 function normalizeMaterialCategory(category: string): Material["category"] {
   if (category === "wire") {
     return "stem";
