@@ -37,6 +37,7 @@ import {
 import { Input } from "@/components/ui/input";
 import { Skeleton } from "@/components/ui/skeleton";
 import { EmptyState } from "@/components/ui/state-views";
+import { useRouteProgress } from "@/components/ui/route-progress";
 import {
   Table,
   TableBody,
@@ -71,6 +72,7 @@ export function DataTable<TData, TValue>({
   getRowHref,
 }: DataTableProps<TData, TValue>) {
   const router = useRouter();
+  const { startNavigation } = useRouteProgress();
   const [sorting, setSorting] = useState<SortingState>([]);
   const [columnFilters, setColumnFilters] = useState<ColumnFiltersState>([]);
   const [columnVisibility, setColumnVisibility] = useState<VisibilityState>({});
@@ -124,6 +126,7 @@ export function DataTable<TData, TValue>({
   function openHref(href: string, target: EventTarget | null) {
     if (!isInteractiveTarget(target) && navigatingHref !== href) {
       setNavigatingHref(href);
+      startNavigation(href);
       router.push(href);
     }
   }

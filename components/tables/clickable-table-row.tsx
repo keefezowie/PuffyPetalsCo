@@ -5,6 +5,7 @@ import type { KeyboardEvent, MouseEvent, ReactNode } from "react";
 import { useState } from "react";
 
 import { TableRow } from "@/components/ui/table";
+import { useRouteProgress } from "@/components/ui/route-progress";
 import { cn } from "@/lib/utils";
 
 function isInteractiveTarget(target: EventTarget | null) {
@@ -23,11 +24,13 @@ export function ClickableTableRow({
   className?: string;
 }) {
   const router = useRouter();
+  const { startNavigation } = useRouteProgress();
   const [isNavigating, setIsNavigating] = useState(false);
 
   function openRow(event: MouseEvent<HTMLTableRowElement> | KeyboardEvent<HTMLTableRowElement>) {
     if (!isNavigating && !isInteractiveTarget(event.target)) {
       setIsNavigating(true);
+      startNavigation(href);
       router.push(href);
     }
   }

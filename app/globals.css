@@ -137,6 +137,22 @@
 }
 
 @layer utilities {
+  @keyframes route-progress-indeterminate {
+    0% {
+      transform: translateX(-120%);
+    }
+    55% {
+      transform: translateX(90%);
+    }
+    100% {
+      transform: translateX(220%);
+    }
+  }
+
+  .route-progress-bar {
+    animation: route-progress-indeterminate 1.15s ease-in-out infinite;
+  }
+
   .surface-warm {
     background:
       radial-gradient(circle at top left, color-mix(in oklab, #d1a9a5 42%, transparent), transparent 34rem),
