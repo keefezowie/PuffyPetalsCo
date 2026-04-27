@@ -17,6 +17,7 @@ import { toast } from "sonner";
 import { EntitySelect } from "@/components/forms/entity-select";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { Checkbox } from "@/components/ui/checkbox";
 import {
   Dialog,
   DialogContent,
@@ -1146,6 +1147,8 @@ export function SettingsUpdateForm({ state }: { state: InventoryState }) {
           "defaultPlatformFeeRate",
           settings.defaultPlatformFeeRate,
         ),
+        updateExistingProducts:
+          formData.getAll("updateExistingProducts").includes("true"),
       });
       toast.success("Settings saved", {
         description: "Costing and stock rules were updated.",
@@ -1198,6 +1201,23 @@ export function SettingsUpdateForm({ state }: { state: InventoryState }) {
             <Field>
               <FieldLabel htmlFor="settings-labor">Labor rate per hour</FieldLabel>
               <Input id="settings-labor" name="laborRatePerHour" type="number" defaultValue={settings.laborRatePerHour} required />
+            </Field>
+            <Field orientation="horizontal">
+              <Checkbox
+                id="settings-update-products"
+                name="updateExistingProducts"
+                value="true"
+                uncheckedValue="false"
+                defaultChecked
+              />
+              <div className="grid gap-1.5 leading-none">
+                <FieldLabel htmlFor="settings-update-products">
+                  Apply target margin and labor rate to existing products
+                </FieldLabel>
+                <FieldDescription>
+                  Updates product rows that store costing assumptions.
+                </FieldDescription>
+              </div>
             </Field>
           </FieldGroup>
           <PendingButton type="submit" pendingText="Saving settings...">

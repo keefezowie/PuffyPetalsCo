@@ -300,5 +300,11 @@ describe("zod validation", () => {
       laborRatePerHour: 20000,
       allowNegativeStock: false,
     }).success).toBe(false);
+    expect(settingsSchema.safeParse({
+      targetMargin: 0.95,
+      defaultPlatformFeeRate: 0.1,
+      laborRatePerHour: 20000,
+      allowNegativeStock: false,
+    }).success).toBe(false);
   });
 });

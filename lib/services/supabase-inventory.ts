@@ -129,8 +129,14 @@ function assertPositive(value: number, field: string) {
 }
 
 function assertRate(value: number, field: string) {
-  if (!Number.isFinite(value) || value < 0 || value > 1) {
+  if (!Number.isFinite(value) || value < 0 || value >= 1) {
     throw new Error(`${field} must be between 0 and 1.`);
+  }
+}
+
+function assertRecommendedPriceRates(targetMargin: number, platformFeeRate: number) {
+  if (targetMargin + platformFeeRate >= 1) {
+    throw new Error("Target margin plus platform fee rate must be less than 1.");
   }
 }
 
@@ -1006,10 +1012,12 @@ export async function updateSettingsAction(input: {
   targetMargin: number;
   laborRatePerHour: number;
   defaultPlatformFeeRate: number;
+  updateExistingProducts?: boolean;
 }) {
   const { db, user } = await getMutationContext();
   assertRate(input.targetMargin, "Target margin");
   assertRate(input.defaultPlatformFeeRate, "Default platform fee rate");
+  assertRecommendedPriceRates(input.targetMargin, input.defaultPlatformFeeRate);
   assertNonNegative(input.laborRatePerHour, "Labor rate");
 
   const { data, error } = await db
@@ -1032,9 +1040,25 @@ export async function updateSettingsAction(input: {
     throw new Error(error.message);
   }
 
+  if (input.updateExistingProducts) {
+    const { error: productError } = await db
+      .from("products")
+      .update({
+        target_margin: input.targetMargin,
+        labor_rate_per_hour: Math.round(input.laborRatePerHour),
+      })
+      .eq("owner_id", user.id);
+
+    if (productError) {
+      throw new Error(productError.message);
+    }
+  }
+
   revalidatePath("/settings");
   revalidatePath("/products");
+  revalidatePath("/finished-goods");
   revalidatePath("/production");
   revalidatePath("/dashboard");
+  revalidatePath("/reports");
   return (data as { id: string }).id;
 }

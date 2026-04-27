@@ -52,13 +52,19 @@ export const settingsSchema = z.object({
   targetMargin: z.coerce
     .number()
     .min(0, "Target margin must be between 0 and 1.")
-    .max(1, "Target margin must be between 0 and 1."),
+    .lt(1, "Target margin must be between 0 and 1."),
   defaultPlatformFeeRate: z.coerce
     .number()
     .min(0, "Platform fee rate must be between 0 and 1.")
-    .max(1, "Platform fee rate must be between 0 and 1."),
+    .lt(1, "Platform fee rate must be between 0 and 1."),
   laborRatePerHour: z.coerce
     .number()
     .nonnegative("Labor rate cannot be negative."),
   allowNegativeStock: z.boolean(),
-});
+}).refine(
+  (settings) => settings.targetMargin + settings.defaultPlatformFeeRate < 1,
+  {
+    message: "Target margin plus platform fee rate must be less than 1.",
+    path: ["defaultPlatformFeeRate"],
+  },
+);
