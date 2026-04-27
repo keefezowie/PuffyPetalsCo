@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
+import { Analytics } from "@vercel/analytics/next";
 import { RouteProgressProvider } from "@/components/ui/route-progress";
 import { Toaster } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
@@ -37,6 +38,7 @@ export default function RootLayout({
             <Toaster />
           </TooltipProvider>
         </RouteProgressProvider>
+        <Analytics />
       </body>
     </html>
   );
